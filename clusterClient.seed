@@ -1,0 +1,50 @@
+d-i debian-installer/locale string en_US
+d-i keyboard-configuration/xkb-keymap select us
+d-i console-keymaps-at/keymap select us
+d-i console-setup/layoutcode string us
+d-i console-setup/variantcode string dvorak
+d-i clock-setup/utc boolean true
+d-i time/zone string US/Eastern
+d-i clock-setup/ntp boolean true
+d-i netcfg/choose_interface select eth0
+d-i netcfg/get_hostname string pc
+d-i mirror/http/mirror select us.archive.ubuntu.com
+d-i passwd/user-fullname string a
+d-i passwd/username string a
+d-i passwd/user-password password a
+d-i passwd/user-password-again password a
+d-i user-setup/allow-password-weak boolean true
+d-i user-setup/encrypt-home boolean false
+
+
+d-i partman-auto/method string regular
+d-i partman-auto/expert_recipe string \
+      boot-root :: \
+              3600 50 3601 btrfs \
+                $primary{ } \
+                $bootable{ } \
+                method{ format } format{ } \
+                use_filesystem{ } \
+                filesystem{ btrfs } \
+                mountpoint{ / } \
+                options/noatime{ noatime } . \
+              3600 50 3601 btrfs \
+                $primary{ } \
+                $bootable{ } \
+                method{ } \
+                use_filesystem{ } \
+                filesystem{ btrfs } \
+                options/noatime{ noatime } .
+d-i partman/confirm_write_new_label boolean true 
+d-i partman/choose_partition \
+       select Finish partitioning and write changes to disk	        
+d-i partman/confirm boolean true
+d-i partman/confirm_nooverwrite boolean true
+d-i partman/mount_style select label
+d-i passwd/make-user boolean false
+d-i pkgsel/upgrade select none
+d-i pkgsel/language-packs multiselect en
+d-i pkgsel/update-policy select none
+#popularity-contest popularity-contest/participate boolean false
+d-i pkgsel/updatedb boolean false
+
