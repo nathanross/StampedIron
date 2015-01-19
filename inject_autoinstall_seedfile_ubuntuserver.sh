@@ -18,9 +18,9 @@ fi
 #if the drive's already mounted, don't remount,
 #but we want a fresh newiso directory in either case
 #for purposes of enabling easy modification / testing of this script
-if [ `mount | grep -i server-amd64.iso | wc -l` -eq 0 ]
+if [ `mount | grep -i *.iso | wc -l` -eq 0 ]
 then
-    mount -o loop *server-amd64.iso ${workdir}/iso
+    mount -o loop *.iso ${workdir}/iso
 fi
 
 cp -rT ${workdir}/iso ${workdir}/newiso

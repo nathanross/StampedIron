@@ -28,19 +28,13 @@ d-i user-setup/encrypt-home boolean false
 d-i partman-auto/method string regular
 d-i partman-auto/expert_recipe string \
       boot-root :: \
-              3600 50 3601 btrfs \
+              3600 50 3601 ext4 \
                 $primary{ } \
                 $bootable{ } \
                 method{ format } format{ } \
                 use_filesystem{ } \
-                filesystem{ btrfs } \
+                filesystem{ ext4 } \
                 mountpoint{ / } \
-                options/noatime{ noatime } . \
-              3600 50 3601 btrfs \
-                $primary{ } \
-                $bootable{ } \
-                method{ } \
-                filesystem{ btrfs } \
                 options/noatime{ noatime } . \
             100 5 -1 ext4 \
                $primary{ }  \
@@ -84,13 +78,6 @@ d-i grub-installer/only_debian boolean true
 d-i finish-install/reboot_in_progress note
 d-i debian-installer/exit/poweroff boolean true
 
-
-#d-i preseed/late_command string \ 
-#    if [ -e /cdrom/cargo.tar.gz ]; \
-#    then; \
-#      mkdir /opt/cargo/ ; \
-#      tar -xf /cdrom/cargo.tar.gz -C /opt/cargo . ; \
-#    fi; 
-
+#d-i preseed/late_command string \
 #    in-target btrfs device add /dev/sda2 /; \
 #    in-target btrfs balance start -dconvert=raid1 -mconvert=raid1 /
