@@ -1,3 +1,8 @@
 tmp
+tmpstore
 archive
 *.iso
+*~
+#*
+*.gz
+*.tar
