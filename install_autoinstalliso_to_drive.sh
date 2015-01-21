@@ -1,4 +1,10 @@
 #!/bin/bash
+if [ ! $WORKDIR ]
+then
+    WORKDIR=/opt/build/tmp
+fi
+workdir=$WORKDIR
+
 if [ $1 ]
 then
     size=$1
@@ -14,4 +20,4 @@ fi
 #fi
 
 qemu-img create tmp/disk.raw $size
-qemu-system-x86_64 -enable-kvm -cpu host -smp 2 -cdrom tmp/autoinstall.iso -boot order=d -m 2048 tmp/disk.raw
+qemu-system-x86_64 -enable-kvm -cpu host -smp 2 -cdrom tmp/autoinstall.iso -boot order=d -m 2048 $WORKDIR/disk.raw

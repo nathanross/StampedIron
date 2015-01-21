@@ -4,6 +4,12 @@
 #
 # assumes you want to inject the seedfile in ubunt server,
 # change the appropriate bash glob pattern below if not.
+
+if [ ! $WORKDIR ]
+then
+    WORKDIR=/opt/build/tmp
+fi
+workdir=$WORKDIR
  
 workdir=/opt/build/tmp
 mkdir -p ${workdir}/iso ${workdir}/newiso ${workdir}/irmod
