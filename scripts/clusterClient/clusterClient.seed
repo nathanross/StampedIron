@@ -65,7 +65,7 @@ d-i preseed/late_command string \
     echo ' ' >> /target/usr/local/sbin/automate.sh; \
     in-target chmod +x /usr/local/sbin/automate.sh; \
     echo '/usr/local/sbin/automate.sh' >> /target/etc/rc.local; \
-    in-target chmod +x /target/etc/rc.local
+    in-target chmod +x /etc/rc.local
 
 
 d-i partman-auto/method string regular
