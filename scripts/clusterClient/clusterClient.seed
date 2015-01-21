@@ -60,11 +60,12 @@ d-i finish-install/reboot_in_progress note
 d-i debian-installer/exit/poweroff boolean true
 
 d-i preseed/late_command string \
-    in-target echo -e '#!/bin/sh' >> /usr/local/sbin/automate.sh; \
-    in-target echo -e 'mount /dev/sdb /mnt' >> /usr/local/sbin/automate.sh; \
-    in-target echo -e ' ' >> /usr/local/sbin/automate.sh; \
+    echo '#!/bin/sh' > /target/usr/local/sbin/automate.sh; \
+    echo 'mount /dev/sdb /mnt' >> /target/usr/local/sbin/automate.sh; \
+    echo ' ' >> /target/usr/local/sbin/automate.sh; \
     in-target chmod +x /usr/local/sbin/automate.sh; \
-    in-target (crontab -l || echo ""; echo "@reboot /usr/local/sbin/automate.sh") | crontab; 
+    echo '/usr/local/sbin/automate.sh' >> /target/etc/rc.local; \
+    in-target chmod +x /target/etc/rc.local
 
 
 d-i partman-auto/method string regular
