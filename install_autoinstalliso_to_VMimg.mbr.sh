@@ -19,5 +19,6 @@ fi
 #    exit
 #fi
 
+rm -f $workdir/disk.raw
 qemu-img create $workdir/disk.raw $size
-qemu-system-x86_64 -enable-kvm -cpu host -smp 2 -cdrom tmp/autoinstall.iso -boot order=d -m 2048 $workdir/disk.raw
+qemu-system-x86_64 -enable-kvm -cpu host -smp 2 -cdrom $workdir/autoinstall.iso -boot order=d -m 2048 $workdir/disk.raw

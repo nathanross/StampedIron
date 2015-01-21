@@ -113,7 +113,6 @@ d-i partman-auto/expert_recipe string \
 
 #GPT install - the below lines should be uncommented if you want a GPT
 #install, and commented out if you want MBR
-d-i   grub-installer/bootdev string "(hd0,1)"
 d-i   partman-basicfilesystems/choose_label string gpt
 d-i   partman-basicfilesystems/default_label string gpt
 d-i   partman-partitioning/choose_label string gpt
