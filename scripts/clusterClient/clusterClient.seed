@@ -113,18 +113,20 @@ d-i partman-auto/expert_recipe string \
 
 #GPT install - the below lines should be uncommented if you want a GPT
 #install, and commented out if you want MBR
-d-i   partman-basicfilesystems/choose_label string gpt
-d-i   partman-basicfilesystems/default_label string gpt
-d-i   partman-partitioning/choose_label string gpt
-d-i   partman-partitioning/default_label string gpt
-d-i   partman/choose_label string gpt
-d-i   partman/default_label string gpt
-partman-partitioning  partman-partitioning/choose_label select gpt
-d-i     partman-auto/choose_recipe      select boot-gpt
+#d-i   grub-installer/bootdev string /dev/sda1
+#d-i   partman-basicfilesystems/choose_label string gpt
+#d-i   partman-basicfilesystems/default_label string gpt
+#d-i   partman-partitioning/choose_label string gpt
+#d-i   partman-partitioning/default_label string gpt
+#d-i   partman/choose_label string gpt
+#d-i   partman/default_label string gpt
+#partman-partitioning  partman-partitioning/choose_label select gpt
+#d-i     partman-auto/choose_recipe      select boot-gpt
 
 #MBR install - the below lines should be uncommented if you want an MBR
 #install, and commented out if you want GPT
-#d-i     partman-auto/choose_recipe      select boot-mbr
+d-i   grub-installer/bootdev string /dev/sda
+d-i     partman-auto/choose_recipe      select boot-mbr
 
 
 
