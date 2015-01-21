@@ -10,9 +10,22 @@ then
     WORKDIR=/opt/build/tmp
 fi
 workdir=$WORKDIR
+
+if [ ! $DISTRO ]
+then
+    DISTRO="debian"
+fi
  
 workdir=/opt/build/tmp
-mkdir -p ${workdir}/iso ${workdir}/newiso ${workdir}/irmod
+
+if [ $DISTRO = "ubuntu" ]
+then
+    mkdir -p ${workdir}/iso ${workdir}/newiso 
+elif [ $DISTRO = "debian" ]
+then
+    mkdir -p ${workdir}/iso ${workdir}/newiso ${workdir}/irmod
+fi
+
 rm -rf ${workdir}/newiso/*
 
 if [ ! $1 ] || [ ! -e $1 ]
@@ -35,26 +48,29 @@ fi
 cp -rT ${workdir}/iso ${workdir}/newiso
 
 newiso=${workdir}/newiso
-sed -ri 's/timeout 0/timeout 1/g' ${newiso}/isolinux/isolinux.cfg
-#don't know which folder actuall requires it, don't care to find out through A/B testing. Which is the only way to be sure as their documentation on this is shitty.
+if [ $DISTRO = "ubuntu" ]
+then
+    echo en > ${newiso}/isolinux/lang
+    sed -ri 's/ (file=.cdrom.preseed.ubuntu-server.seed) *vga=[0-9]+/auto=true locale=en_US console-setup\/layoutcode=us \1 /g' ${newiso}/isolinux/txt.cfg
+    cat $1 ${newiso}/preseed/ubuntu-server.seed > /tmp/tmpseed
+    sed -ri 's/(steps.*)(language|timezone|keyboard|user|network),//g' /tmp/tmpseed
+    sed -ri 's/timeout +string +[0-9]{1,2}/timeout string 0/g' /tmp/tmpseed
+    cp /tmp/tmpseed ${newiso}/preseed/ubuntu-server.seed
 
-cd ${workdir}/irmod
-gzip -d < ${newiso}/install.amd/initrd.gz | \
+elif [ $DISTRO = "debian" ]
+then
+    sed -ri 's/timeout 0/timeout 1/g' ${newiso}/isolinux/isolinux.cfg
+    #don't know which folder actuall requires it, don't care to find out through A/B testing. Which is the only way to be sure as their documentation on this is shitty.
+    cd ${workdir}/irmod
+    gzip -d < ${newiso}/install.amd/initrd.gz | \
         cpio --extract --verbose --make-directories --no-absolute-filenames
-cp $seed ./preseed.cfg
-find . | cpio -H newc --create --verbose | \
+    cp $seed ./preseed.cfg
+    find . | cpio -H newc --create --verbose | \
         gzip -9 > ${newiso}/install.amd/initrd.gz
-cd ../
+    cd ../
 
-#if [ $2 ]
-#then
-#    if [ -d $2 ]
-#    then
-#        tar -czf ${newiso}/cargo.tar.gz -C $2 .
-#    else
-#        echo "error, if you provide a 2nd param, it must be a directory to add to the boot disk root in a gzipped tarball called cargo.tar.gz"
-#    fi
-#fi
+fi
+
 
 #D stands for disable deep directory relocation
 #r stands for rock ridge directory information
@@ -67,5 +83,5 @@ cd ../
 #this commented out line doesn't work: the reason: the binary and catalog paths must be relative for some silly reason.
 #mkisofs -input-charset utf-8 -D -r -V "ATTENDLESS_UBUNTU" -cache-inodes -J -l bi ${newiso}/isolinux/isolinux.bin -c ${newiso}/isolinux/boot.cat -no-emul-boot -boot-load-size 4 -boot-info-table -o ${workdir}/autoinstall.iso ${newiso}/
 #cd ${newiso}
-genisoimage -input-charset utf-8 -D -r -V "ATTENDLESS_DEBIAN" -cache-inodes -J -l -b isolinux/isolinux.bin -c isolinux/boot.cat -no-emul-boot -boot-load-size 4 -boot-info-table -o ${workdir}/autoinstall.iso ${newiso}/
+genisoimage -input-charset utf-8 -D -r -V "ATTENDLESS_${distro}" -cache-inodes -J -l -b isolinux/isolinux.bin -c isolinux/boot.cat -no-emul-boot -boot-load-size 4 -boot-info-table -o ${workdir}/autoinstall.iso ${newiso}/
 
