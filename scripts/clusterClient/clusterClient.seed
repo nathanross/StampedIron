@@ -68,6 +68,9 @@ d-i debian-installer/exit/poweroff boolean true
 
 d-i preseed/late_command string \
     cp /cdrom/clusterClient/automate.sh /target/usr/local/sbin/automate.sh; \
+    cp /cdrom/clusterClient/dmidecode.deb /target/opt/;\
+    cp /cdrom/clusterClient/virt-what.deb /target/opt/;\
+    in-target dpkg --force-all -i /opt/dmidecode.deb /virt-what.deb; \
     in-target chmod +x /usr/local/sbin/automate.sh; \
     echo '/usr/local/sbin/automate.sh' > /target/etc/rc.local; \
     echo 'exit 0 ' >> /target/etc/rc.local; \
