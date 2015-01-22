@@ -8,7 +8,7 @@ then
         umount /tmp/dirhost.raw
         rm -f /tmp/dirhost.raw
         qemu-img create /tmp/dirhost.raw 200M
-        mkfs.ext4 /tmp/dirhost.raw 
+        yes | mkfs.ext4 /tmp/dirhost.raw 
         mount /tmp/dirhost.raw /mnt
         cp -r $2 /mnt
         umount /mnt
