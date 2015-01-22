@@ -1,6 +1,7 @@
 #!/bin/bash
 # to run:
 # pass as 1st argument the name of the preseed file you want to inject.
+# optional 2nd argument: path to 'cp -r' to cd root
 #
 # assumes you want to inject the seedfile in ubunt server,
 # change the appropriate bash glob pattern below if not.
@@ -31,7 +32,13 @@ rm -rf ${workdir}/newiso/*
 if [ ! $1 ] || [ ! -e $1 ]
 then
     echo "error. you need to provide the seed file as the argument"
-    exit
+    exit 1
+fi
+
+if [ $2 ] && [ ! $2 ]
+then
+    echo "error, if you provide a second arg, it must be a path to an existing file or directory, which will be copied to the cd root"
+    exit 1
 fi
 
 seed=`readlink -f $1`
@@ -44,8 +51,12 @@ if [ `mount | grep -i *.iso | wc -l` -eq 0 ]
 then
     mount -o loop *.iso ${workdir}/iso
 fi
-
+if [ $2 ]
+then
+    cp -r $2 ${workdir}/newiso
+fi
 cp -rT ${workdir}/iso ${workdir}/newiso
+
 
 newiso=${workdir}/newiso
 if [ $DISTRO = "ubuntu" ]

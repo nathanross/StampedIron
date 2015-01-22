@@ -9,7 +9,13 @@ d-i clock-setup/ntp boolean true
 d-i netcfg/choose_interface select eth0
 d-i netcfg/get_hostname string pc
 d-i netcfg/get_domain string loc.al
-d-i mirror/http/mirror select us.archive.ubuntu.com
+#d-i mirror/http/mirror select us.archive.ubuntu.com
+d-i mirror/country string us
+d-i mirror/http/hostname string http.us.debian.org
+d-i mirror/http/directory string /debian
+d-i mirror/suite string testing
+d-i mirror/http/proxy string
+d-i apt-setup/use_mirror boolean true
 
 #necessary for debian only.
 #but result is that in both root account has password a
@@ -35,7 +41,7 @@ d-i partman/confirm_nooverwrite boolean true
 d-i partman/mount_style select label
 d-i passwd/make-user boolean false
 d-i tasksel/first multiselect none
-d-i pkgsel/include string openssh-server
+d-i pkgsel/include string virt-what
 d-i pkgsel/upgrade select none
 d-i pkgsel/language-packs multiselect en
 d-i pkgsel/update-policy select none
@@ -47,24 +53,24 @@ d-i partman-basicfilesystems/no_swap boolean false
 
 d-i apt-setup/main boolean true
 d-i apt-setup/contrib boolean true
-d-i apt-setup/use_mirror boolean false
+
 d-i apt-setup/cdrom/set-first boolean false
 d-i apt-setup/cdrom/set-next boolean false   
 d-i apt-setup/cdrom/set-failed boolean false
 
 popularity-contest popularity-contest/participate boolean false
-d-i pkgsel/updatedb boolean false
+d-i pkgsel/updatedb boolean true
 
 d-i grub-installer/only_debian boolean true
 d-i finish-install/reboot_in_progress note
 d-i debian-installer/exit/poweroff boolean true
 
 d-i preseed/late_command string \
-    echo '#!/bin/sh' > /target/usr/local/sbin/automate.sh; \
-    echo 'mount /dev/sdb /mnt' >> /target/usr/local/sbin/automate.sh; \
-    echo ' ' >> /target/usr/local/sbin/automate.sh; \
+    cp /cdrom/clusterClient/automate.sh /target/usr/local/sbin/automate.sh; \
     in-target chmod +x /usr/local/sbin/automate.sh; \
-    echo '/usr/local/sbin/automate.sh' >> /target/etc/rc.local; \
+    echo '/usr/local/sbin/automate.sh' > /target/etc/rc.local; \
+    echo 'exit 0 ' >> /target/etc/rc.local; \
+    echo ' ' >> /target/etc/rc.local; \
     in-target chmod +x /etc/rc.local
 
 
