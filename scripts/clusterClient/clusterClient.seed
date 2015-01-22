@@ -9,13 +9,14 @@ d-i clock-setup/ntp boolean true
 d-i netcfg/choose_interface select eth0
 d-i netcfg/get_hostname string pc
 d-i netcfg/get_domain string loc.al
-#d-i mirror/http/mirror select us.archive.ubuntu.com
-d-i mirror/country string us
-d-i mirror/http/hostname string http.us.debian.org
-d-i mirror/http/directory string /debian
-d-i mirror/suite string testing
-d-i mirror/http/proxy string
-d-i apt-setup/use_mirror boolean true
+d-i mirror/http/mirror select us.archive.ubuntu.com
+#d-i mirror/country string us
+#d-i mirror/http/hostname string http.us.debian.org
+#d-i mirror/http/directory string /debian
+#d-i mirror/suite string testing
+#d-i mirror/http/proxy string
+#d-i apt-setup/use_mirror boolean true
+d-i apt-setup/use_mirror boolean false
 
 #necessary for debian only.
 #but result is that in both root account has password a
