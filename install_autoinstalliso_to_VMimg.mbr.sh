@@ -9,8 +9,8 @@ if [ $1 ]
 then
     size=$1
 else
-    echo "setting image size to default of 8gb"
-    size=14G
+    echo "setting image size to default of 14.5gb"
+    size=14.5G
 fi
 
 #if [ $1 = "/dev/sda" ]
