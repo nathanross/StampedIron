@@ -42,7 +42,7 @@ d-i partman/confirm_nooverwrite boolean true
 d-i partman/mount_style select label
 d-i passwd/make-user boolean false
 d-i tasksel/first multiselect none
-d-i pkgsel/include string virt-what
+#d-i pkgsel/include string virt-what
 d-i pkgsel/upgrade select none
 d-i pkgsel/language-packs multiselect en
 d-i pkgsel/update-policy select none
@@ -70,7 +70,7 @@ d-i preseed/late_command string \
     cp /cdrom/clusterClient/automate.sh /target/usr/local/sbin/automate.sh; \
     cp /cdrom/clusterClient/dmidecode.deb /target/opt/;\
     cp /cdrom/clusterClient/virt-what.deb /target/opt/;\
-    in-target dpkg --force-all -i /opt/dmidecode.deb /virt-what.deb; \
+    in-target dpkg --force-all -i /opt/dmidecode.deb /opt/virt-what.deb; \
     in-target chmod +x /usr/local/sbin/automate.sh; \
     echo '/usr/local/sbin/automate.sh' > /target/etc/rc.local; \
     echo 'exit 0 ' >> /target/etc/rc.local; \

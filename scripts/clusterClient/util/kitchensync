@@ -1,0 +1,12 @@
+#!/bin/bash
+dev=/dev/sdb1
+if mount | grep -i $dev > /dev/null
+then
+    echo "already mounted."
+else
+    echo "not mounted. mounting"
+    mount $dev /nonram
+fi
+
+echo "warning! know that the contents of /mnt, /opt, /media, and /var are NOT copied over. thx"
+rsync --progress -a /bin /boot /dev /etc /home /initrd.img /lib /lib64 /lost+found /root /sbin /srv /usr /vmlinuz /nonram
