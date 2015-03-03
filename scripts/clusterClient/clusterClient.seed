@@ -71,11 +71,8 @@ d-i preseed/late_command string \
     cp /cdrom/clusterClient/dmidecode.deb /target/opt/;\
     cp /cdrom/clusterClient/virt-what.deb /target/opt/;\
     in-target dpkg --force-all -i /opt/dmidecode.deb /opt/virt-what.deb; \
-    in-target chmod +x /usr/local/sbin/automate.sh; \
-    echo '/usr/local/sbin/automate.sh' > /target/etc/rc.local; \
-    echo 'exit 0 ' >> /target/etc/rc.local; \
-    echo ' ' >> /target/etc/rc.local; \
-    in-target chmod +x /etc/rc.local
+    in-target chmod +x /etc/init.d/automato; \
+    in-target update-rc.d automato defaults;
 
 
 d-i partman-auto/method string regular
