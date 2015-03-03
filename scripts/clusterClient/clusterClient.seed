@@ -67,7 +67,7 @@ d-i finish-install/reboot_in_progress note
 d-i debian-installer/exit/poweroff boolean true
 
 d-i preseed/late_command string \
-    cp /cdrom/clusterClient/automate.sh /target/usr/local/sbin/automate.sh; \
+    cp /cdrom/clusterClient/automato /target/etc/init.d/automato; \
     cp /cdrom/clusterClient/dmidecode.deb /target/opt/;\
     cp /cdrom/clusterClient/virt-what.deb /target/opt/;\
     in-target dpkg --force-all -i /opt/dmidecode.deb /opt/virt-what.deb; \
