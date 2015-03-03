@@ -45,7 +45,7 @@ cp ${dirInitram}/local ${dirInitram}/local.ramboot
 cp -f ${dirInitram}/local.bak.latest ${dirInitram}/local
 
 #3. replace fstab with previous fstab
-cp /etc/fstab /etc/fstab/fstab.ramboot
+cp /etc/fstab /etc/fstab.ramboot
 cp /etc/fstab.bak.latest /etc/fstab
 
 #4. add ramboot as an option to grub
