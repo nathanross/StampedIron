@@ -8,3 +8,4 @@ then
         /mnt/./run.sh
     fi        
 fi
+exit 0
