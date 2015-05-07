@@ -1,0 +1,738 @@
+#!/bin/bash
+
+if [ ! $STOCK_AMI ]
+then
+    STOCK_AMI=ami-87367eb7
+fi
+
+if [ ! $VERBOSE ] 
+then
+    VERBOSE=0
+fi
+COLOR_NORMAL='\e[0;0m'
+COLOR_CMD='\e[0;34m'
+COLOR_VERBOSE='\e[0;34m'
+COLOR_WARNING='\e[0;33m'
+COLOR_ERROR='\e[0;31m'
+#environment variables you MUST HAVE SET
+#for imagebuild AMI to work
+
+
+#syntax: imagebuild {image type} {path to boot.sh file} {opt: a name for the container}
+
+# relpath-based dependency resolution: looks for .git folder, or telescopes through
+# parent folders until it finds one. after that, looks for script paths in ./
+# and ./libs/ relative to repo root. 
+
+# abspath-based image name storage. though you should know that imagerun will consider
+# the current directory in running the image if it can't find it by abspath.
+
+#IMPORTANT:
+# on creation, all files within the script's 
+# repo (except submodules) are copied
+# to the guest machine in /opt/src/
+# this directory is removed on completion 
+# of the boot script's execution.
+
+#check out the fun way I deal with bash not 
+#having a type system. todo: at least replace this with maps for christ's sake.
+#actually: todo todo: rewrite this in another scripting language.
+
+log() {
+    if [ $1 = 'cmd' ]
+    then
+        if [ $VERBOSE -lt 1 ]
+        then
+            return 0
+        fi
+        echo -en $COLOR_CMD
+    elif [ $1 = 'verbose' ]
+    then 
+        if [ $VERBOSE -lt 1 ]
+        then
+            return 0
+        fi
+        echo -en $COLOR_VERBOSE
+    elif [ $1 = 'info' ]
+    then
+        if [ $VERBOSE -lt 0 ]
+        then
+            return 0
+        fi
+    elif [ $1 = 'warning' ]
+    then
+        echo -en $COLOR_WARNING
+    elif [ $1 = 'error' ]
+    then
+        echo -en $COLOR_ERROR
+    fi
+    echo -e $@
+    echo -en $COLOR_NORMAL
+}
+
+error() {
+    log error $@
+    exit 1
+}
+
+
+checkDependencies() {
+    if [ ! `which readlink` ] 
+    then
+        error "Missing: 'imagebuild' depends on readlink." \
+         "This can be installed on debian-based OSes with 'apt-get install coreutils'"
+    fi
+    if [ $1 = 'lxc' ]
+    then
+        if [ ! `which lxc-create` ]
+        then
+            error "Missing: 'imagebuild lxc' depends on lxc." \
+            " This can be installed on debian-based OSes with 'apt-get install lxc gettext-base coreutils'"
+        fi
+    elif [ $1 = 'ami' ]
+    then
+        if [ ! `which aws` ]
+        then
+            error "Missing: 'imagebuild aws' depends on the awscli. generally you'll get this by " \
+            "apt-get install python pip && pip install awscli" \
+            "then you'll want to run 'aws configure' and provide it with an access key and secret key " \
+            "with the ability to spin up EC2s within a fenced in area (for building and running staging images)" \
+            "and/or the public section of the VPC (for spinning up deploys)"            
+        fi
+    fi
+}
+
+checkAuthVarsBuild() {
+    if [ $1 = 'ami' ]
+    then
+        missing=();
+        if [ ! $KEY_NAME_BUILD ]
+        then
+            missing+=("\n KEY_NAME_BUILD (the name of your keypair used for imagebuild)")
+        fi
+        if [ ! $PEM_BUILD ]
+        then
+            missing+=("\n PEM_BUILD (the location of your PEM key for the keypair used for imagebuild)")
+        fi
+        if [ ! $SECURITY_GROUP_NAME_BUILD ]
+        then
+            missing+=("\n SECURITY_GROUP_IDS_BUILD (name(s) of security group(s) used for imagebuild.)")
+        fi
+        if [ ! $BUCKET_NAME_BUILD ]
+        then
+            missing+=("\n BUCKET_NAME_BUILD (name(s) of buckets group(s) used for imagebuild.)")
+        fi
+        if [ ! $REGION_BUILD ]
+        then
+            missing+=("\n REGION_BUILD (must be a region available to your account && which your security group exists in. regions are supersets of availability zones, so if some of your instances are in us-west-2c, us-west-2 is the region you'd use here.)")
+        fi
+        if [ ${#missing[@]} -gt 0 ]
+        then
+            missing+=("\n see sampleAMIenv.sh for an example of a valid env for this. \n")
+            error "to build an AMI, you must specify authentication and subnet for temporary images. You are missing the following enviroment variables. ${missing[@]}"
+        fi        
+    fi
+}
+checkAuthVarsRun() {
+    if [ $1 = 'ami' ]
+    then
+        missing=()
+        if [ ! $KEY_NAME_RUN ]
+        then
+            missing+=("\n KEY_NAME_RUN (the name of your keypair used for imagerun)")
+        fi
+        if [ ! $PEM_RUN ]
+        then
+            missing+=("\n PEM_BUILD (the location of your PEM key for the keypair used for imagerun)")
+        fi
+        if [ ! $SECURITY_GROUP_NAME_RUN ]
+        then
+            missing+=("\n SECURITY_GROUP_IDS_RUN (id(s) of security group(s) used for imagerun.)")
+        fi
+        if [ ! $BUCKET_NAME_BUILD ]
+        then
+            missing+=("\n BUCKET_NAME_BUILD (name(s) of buckets group(s) used for imagebuild.)")
+        fi
+        if [ ! $REGION_RUN ]
+        then
+            missing+=("\n REGION_RUN (must be a region available to your account && which your security group exists in. regions are supersets of availability zones, so if some of your instances are in us-west-2c, us-west-2 is the region you'd use here.)")
+        fi
+        if [ ${#missing[@]} -gt 0 ]
+        then
+            missing+=("\n see sampleAMIenv.sh for an example of a valid env for this. \n")
+            error " Error: to stage an AMI, you must specify authentication and subnet for the image. You are missing the following enviroment variables. ${missing[@]}"
+        fi
+    fi
+    
+}
+
+formatName () {
+    local result='';
+    local ret=$1;
+    # for convenience,
+    # we want the image id to be the same for aws and lxc.
+    # for lxc, qemu, etc. hash based on fs loc might be enough,
+    # but we want to account for the possibility that a user might
+    # for whatever weird reason, decide to use a shared registry
+    # temporarily. in that case, fs loc wouldn't be enough to prevent
+    # flat-dependency namespace conflict.
+
+    #TODO include branch in hash
+    whoami=`whoami`
+    host=`uname -n`
+    result=`echo $host/$whoami/$3 | md5sum | cut -d" " -f1 `
+    result="i${result}"
+
+    eval $ret="'$result'"
+}
+
+
+#check each requirement is built. 
+#in the future, maybe check built version's .git commit #
+#against the repo's. that way no having to manually invalidate
+#images or messily clear out a lot at once.
+
+existsImage () {
+    if [ $1 = 'lxc' ]
+    then
+        exists=`lxc-ls | grep -i $2 | wc -l `
+        [ 1 -eq $exists ]
+        return $?
+    elif [ $1 = 'ami' ]
+    then        
+        log cmd "aws ec2 describe-images --region $REGION_BUILD --owner self --query \"Images[*].Name\""
+        exists=`aws ec2 describe-images --region $REGION_BUILD --owner self --query "Images[*].Name" | grep -i $2 | wc -l `
+        [ 1 -eq $exists ]
+        return $?
+    fi
+    return 0
+}
+
+deleteOldImage() {
+    if [ $1 = 'lxc' ]
+    then
+        if [ `lxc-ls | grep -i $2 | wc -l` -gt 0 ]
+        then
+            if [ `lxc-ls --active | grep -i $2 | wc -l` -gt 0 ]
+            then
+                lxc-stop -kn $2
+            fi
+            lxc-destroy -n $2
+        fi
+    elif [ $1 = 'ami' ]
+    then
+        log info "a previous image from this file exists... deleting it."
+        #if we switch to using instance store-backed AMIs,
+        #we should use ec2-delete-bundle instead of this.
+        echo $2
+        log cmd "aws ec2 describe-images --region $REGION_BUILD --owner self --query \"Images[*].[Name,ImageId]\" | awk \"{ if ( x == 1 ) { print \$1; exit } if (/$2/) { x=1 } }\" | tr -d ' \"'"
+        imageId=`aws ec2 describe-images --region $REGION_BUILD --owner self --query "Images[*].[Name,ImageId]" | awk "{ if ( x == 1 ) { print \\$1; exit } if (/$2/) { x=1 } }" | tr -d ' "'`
+        log verbose "imageId is ${imageId}"
+        log cmd "aws ec2 describe-snapshots --region $REGION_BUILD --owner self --query \"Snapshots[*].[Description,SnapshotId]\" | awk \"{ if ( x == 1 ) { print $1; exit } if (/$imageId/) { x=1 } }\" | tr -d ' \"' "
+        snapshotId=`aws ec2 describe-snapshots --region $REGION_BUILD --owner self --query "Snapshots[*].[Description,SnapshotId]" | awk "{ if ( x == 1 ) { print \\$1; exit } if (/$imageId/) { x=1 } }" | tr -d '" ' `
+        log verbose "snapshotId is ${snapshotId}"
+        log cmd "aws ec2 deregister-image --image-id $imageId --region $REGION_BUILD"
+        aws ec2 deregister-image --image-id $imageId --region $REGION_BUILD
+        log cmd "aws ec2 delete-snapshot --snapshot-id $snapshotId --region $REGION_BUILD"
+        aws ec2 delete-snapshot --snapshot-id $snapshotId --region $REGION_BUILD
+    fi
+    
+}
+
+rootAttach() {
+    lxc-attach --clear-env -v HOME="/root" -v PATH="/bin:/usr/bin:/usr/local/bin:/sbin:/usr/sbin:/usr/local/sbin" -v TERM="linux" -v MANAGED_BUILD="1" $@
+}
+
+amiRunEC2() {
+    local ret=$1
+    #TODO better querying so no potential resource conflict
+    log cmd "aws ec2 run-instances --image-id $2 --count 1 --instance-type t2.micro --key-name $3 --security-group-ids $4 --region $5 --query 'Instances[0].InstanceId' "
+    instanceId=`aws ec2 run-instances --image-id $2 --count 1 --instance-type t2.micro --key-name $3 --security-group-ids $4 --region $5 --query 'Instances[0].InstanceId'`    
+    log verbose "instanceID is... ${instanceId}"
+    eval $ret=$instanceId
+}
+amiCmd() {
+    if [ $VPN_BUILD ]
+    then
+        error "vpn connect not supported yet." #TODO
+    else
+        #debian images on aws by default req. you to login as admin.
+        log cmd "ssh -t -i $PEM_BUILD -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ConnectTimeout=10 -o ConnectionAttempts=3 admin@$1 $2"
+        i=0
+        maxTries=5
+        success=0
+        while [ $i -lt $maxTries ] && [ $success -eq 0 ]
+        do            
+            i=`expr $i + 1`
+            ssh -q -t -i $PEM_BUILD -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ConnectTimeout=10 -o ConnectionAttempts=3 admin@$1 $2 && success=1 || success=0
+        done
+        if [ $? -eq 1 ]
+        then
+            error "appear to have had an ssh error. exiting."
+        fi
+    fi
+}
+
+getImageAmiNum () {
+    local ret=$1
+    log cmd "aws ec2 describe-images --region"
+    amiNum=`aws ec2 describe-images --region $REGION_BUILD --owner self --query "Images[*].[Name,ImageId]" | awk "{ if ( x == 1 ) { print $1; exit } if (/$2/) { x=1 } }" | tr -d ' "'`
+    log verbose "got amiNum of image... $amiNum"
+    #aws ec2 describe-images --region $REGION --owner self
+    eval $ret=$amiNum
+}
+
+runSshAmi() {
+    ssh -t admin@$1 $2
+}
+
+buildDep() {
+    fromStock=0
+    if [ $2 = 'fromStock' ]
+    then
+        fromStock=1
+    fi
+    if [ $1 = 'lxc' ]
+    then
+        #TODO source snapshot here.
+
+
+        if [ $fromStock -eq 1 ]
+        then
+            if [ -e /var/lib/lxc/$3 ]
+            then
+                rm -rf /var/lib/lxc/$3
+            fi 
+            log cmd "lxc-create -t debian -B btrfs --name $3 -- -r wheezy"
+            #overlayfs is kernel 3.18
+            #jessie, the only debian that will update stable anytime soon, is pinned to 3.16 for all
+            #security purposes. :.. (            
+            SUITE=wheezy MIRROR=http://ftp.fr.debian.org/debian lxc-create -n $3 -B best -t debian
+            #lxc-create -t debian -B btrfs --name $3 -- -r wheezy
+            #lxc-create -t ubuntu -B overlayfs --name $3 --
+            #tmp before kernel update
+            #cp -r $4 /var/lib/lxc/$3/rootfs/opt/src
+            
+        else
+            if [ -e /var/lib/lxc/$3 ]
+            then
+                rm -rf /var/lib/lxc/$3
+            fi
+            log cmd "lxc-clone -s -o $7 -n $3 "
+            
+            lxc-clone -s -o $7 -n $3            
+                        
+            #overlayfs direct copy solution
+            #if [ -h /var/lib/lxc/$3/delta0/opt/src ] 
+            #then
+                #file is a symbolic link signifying a "white-out" of the prev directory in its root image.
+            #    rm /var/lib/lxc/$3/delta0/opt/src
+            #fi
+            #mkdir -p /var/lib/lxc/$3/delta0/opt
+            #cp -r $4 /var/lib/lxc/$3/delta0/opt/src
+        fi
+        cfgfile=/var/lib/lxc/$3/config
+        rm -rf /tmp/tmpstore
+        cp -r $4 /tmp/tmpstore
+        chmod -R 7777 /tmp/tmpstore            
+        echo "lxc.mount.entry = /tmp/tmpstore opt/src none defaults,bind,create=dir 0 0" >> $cfgfile
+
+        log cmd "lxc-start -d --name $3"
+        if [ -e $4/$5/$6.lxc ]
+        then
+            cp $4/$5/$6.lxc /var/lib/lxc/$3/config
+        fi
+        lxc-start -d --name $3
+        #if you don't set it down first, on child images
+        #it will read it as already being configured.
+        sleep 3
+        rootAttach -n $3 -- ifdown eth0
+        rootAttach -n $3 -- ifup eth0
+        rootAttach -n $3 -- /opt/src/$5/./$6         
+        if [ -e /tmp/tmpstore/out ]
+        then
+            rm -rf $4/out
+            cp -r /tmp/tmpstore/out $4/out
+        fi
+        rootAttach -n $3 -- umount /opt/src/
+        rootAttach -n $3 -- sync
+        lxc-stop -kn $3
+        sed -ri 's/lxc.mount.entry = \/tmp\/tmpstore.*//g' $cfgfile
+        #rm -rf /tmp/tmpstore
+        #TODO finalize image here.
+    elif [ $1 = 'ami' ]
+    then
+        tar -czf /tmp/imagetmp.tar.gz -C $4 .
+        log cmd "aws s3 cp /tmp/imagetmp.tar.gz s3://$BUCKET_NAME_BUILD/"
+        aws s3 cp /tmp/imagetmp.tar.gz s3://$BUCKET_NAME_BUILD/
+        buildUri=s3://$BUCKET_NAME_BUILD/imagetmp.tar.gz
+        buildScriptDir=/opt/src/$5/
+        buildScriptFname=$6
+        cloudFormationPath=/$4/$5/cloudFormation.build.json
+        if [ ! -e $cloudFormationPath ]
+        then
+            if [ $fromStock ]
+            then
+                error "root Image must have accompanying cloudFormation.build.json file"
+            fi
+            $cloudFormationPath="cloudFormation.build.json" #TODO BASH_SOURCE path to this file. or at least a specific location for these default values.
+        fi                
+        
+        if [ $fromStock ]
+        then
+            ami="N/a"
+        else
+            getImageAmiNum ami $7
+        fi
+        delete_sent=0
+        while :;
+        do
+            log cmd "aws cloudformation list-stacks --query "StackSummaries[*].[StackStatus,StackId]" --region $REGION_BUILD | awk '{ if (/DELETE_COMPLETE/) { x=0; } else { if (x == 1) { print $0 } x=1; } }' | grep -i $3 "
+            stack_exists=`aws cloudformation list-stacks --query "StackSummaries[*].[StackStatus,StackId]" --region $REGION_BUILD | awk '{ if (/DELETE_COMPLETE/) { x=0; } else { if (x == 1) { print $0 } x=1; } }' | grep -i $3 `
+            if [ `echo -n $stack_exists | wc -c` -gt 0 ]
+            then                
+                if [ $delete_sent -eq 0 ]
+                then
+                    log info "previous stack for this file already exists, waiting for it to terminate (can take a minute)..."
+                    log cmd "aws cloudformation delete-stack --stack-name=$3 --region $REGION_BUILD"
+                    aws cloudformation delete-stack --stack-name=$3 --region $REGION_BUILD
+                    delete_sent=1
+                fi
+                sleep 3
+            else
+                break
+            fi
+       done
+       log info 'creating stack'
+       log cmd "aws cloudformation create-stack --stack-name $3 --template-body file://$cloudFormationPath --parameters ParameterKey=MySecurityGroup,ParameterValue=$SECURITY_GROUP_NAME_BUILD ParameterKey=KeyName,ParameterValue=$KEY_NAME_BUILD ParameterKey=Release,ParameterValue=Wheezy77basex8664hvmebs ParameterKey=Inherit,ParameterValue=$ami ParameterKey=BuildScriptCmd,ParameterValue=$5/./$6 ParameterKey=BuildTarGzURI,ParameterValue=$buildUri --region $REGION_BUILD"
+        aws cloudformation create-stack --stack-name $3 --template-body file://$cloudFormationPath --parameters ParameterKey=MySecurityGroup,ParameterValue=$SECURITY_GROUP_NAME_BUILD ParameterKey=KeyName,ParameterValue=$KEY_NAME_BUILD ParameterKey=Release,ParameterValue=Wheezy77basex8664hvmebs ParameterKey=Inherit,ParameterValue=$ami ParameterKey=BuildScriptDir,ParameterValue=$5 ParameterKey=BuildScriptFname,ParameterValue=$6 ParameterKey=BuildTarGzURI,ParameterValue=$buildUri --region $REGION_BUILD
+        #once we recode this in, say, js, we can parse the list-stack-resources return json, and find out whether, specifically, the instance object is complete. This will allow people to include other resources in the cloud formation if they so choose.
+        complete=0
+        log info 'waiting for instance to be created... starting a new instance in AWS takes a variable amount of time... sometimes up to 5 minutes.'
+        i=0
+        while : ;
+        do
+            i=`expr $i + 1`
+            log cmd "aws cloudformation list-stack-resources $3"
+            if [ `aws cloudformation list-stack-resources --stack-name $3 --region $REGION_BUILD | grep -i CREATE_COMPLETE | wc -l` -eq 1 ]
+            then
+                log cmd "aws cloudformation list-stack-resources --stack-name $3 --region $REGION_BUILD --query \"StackResourceSummaries[0].PhysicalResourceId\" "
+                instanceId=`aws cloudformation list-stack-resources --stack-name $3 --region $REGION_BUILD --query "StackResourceSummaries[0].PhysicalResourceId" | tr -d '"' `
+                log verbose "instance is $instanceId"
+                #todo: change this for private for vpn instances
+                log verbose "aws ec2 describe-instances --instance-id $instanceId --region us-west-2 --query \"Reservations[0].Instances[0].PublicIpAddress\""
+                instanceIp=`aws ec2 describe-instances --instance-id $instanceId --region us-west-2 --query "Reservations[0].Instances[0].PublicIpAddress" | tr -d '"' `
+                log verbose "instanceIp is $instanceIp"
+                break
+            fi
+            if [ $i -eq 30 ]
+            then
+                error "it's been 5 minutes and the instance has not been created successfully. assuming an error."
+            fi
+            sleep 10
+        done
+        log info 'instance created successfully... checking for build script completion. The amount of time will depend on what your build script does.'
+
+        i=0
+        waitLimit=10
+        newlyWaiting=0
+        while : ;
+        do
+            i=`expr $i + 1`
+            sleep 10
+            if [ $i -eq $waitLimit ]
+            then
+                error "either can't get log, or build is taking a very long time to complete."
+            fi
+            log cmd "scp -q -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -i $PEM_BUILD admin@$instanceIp:/var/log/imager.status /tmp/imager.status"
+            scp -q -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -i $PEM_BUILD admin@$instanceIp:/var/log/imager.status /tmp/imager.status || continue
+            status=`cat /tmp/imager.status`
+            if [ $status = 'error' ]
+            then                
+                scp -i $PEM_BUILD admin@:/var/log/syslog /tmp/imager.syslog 
+                syslog=`cat /tmp/imager.syslog`
+                #TODO: separate build script failure errors from syslog?
+                # OTOH it's nice to have everything in one place as to what
+                # could be possibly wrong with an image. maybe just duplicate
+                # them to somewhere else and for this script just print this log.
+                error "build script FAILED. Here is the syslog: $syslog"
+            elif [ $status = 'waiting' ]
+            then
+                if [ $newlyWaiting -eq 0 ]
+                then
+                   log info "the build script has started."
+                elif [ $waitLimit -gt 10 ]
+                then
+                    log info "the build script is taking a long time to complete. this script will continue to check for the build script's completion every 10s until it completes, you cancel this, or 30 minutes have passed."
+                    waitLimit=180
+                fi
+            elif [ $status = 'success' ]
+            then
+                log info 'build script completed successfully. creating image'
+                break
+            fi
+        done
+        log cmd "aws ec2 create-image --instance-id $instanceId --name $3 --region us-west-2 --query\"ImageId\" "
+        imageId=`aws ec2 create-image --instance-id $instanceId --name $3 --region us-west-2 --query "ImageId" | tr -d '"' `
+        log verbose "imageId is $imageId"
+        exit 0
+    fi
+}
+
+getMode() {
+    modes="ami lxc"
+    local ret=$1;
+    if [ ! $2 ] || ! [[ $modes =~ $2 ]]
+    then
+        error "please provide one of the following modes: ami, lxc"
+    fi
+    eval $ret=$2
+}
+
+checkModeSyntax() {
+    #currently both modes in both build and run function pretty much the same.
+    if [ ! $2 ] || [ ! -e $2 ] 
+    then
+        error "error: you must pass as an argument an existing local" \
+        "shell file to run within the guest machine."
+    fi    
+}
+
+findRootDir() {
+    local ret=$1;
+    rootDir=`dirname $2`
+    while [ ! -e $rootDir/.git ]
+    do
+        if [ $rootDir = '/' ]
+        then
+            error "could not locate active git repository of boot script." \
+            "imagebuild uses git repository as the folder to copy over."            
+        fi
+        rootDir=`dirname $rootDir`
+    done
+    eval $ret=$rootDir
+}
+
+build() {
+    
+    getMode mode $1 
+    checkDependencies $mode;
+    checkModeSyntax $@
+    checkAuthVarsBuild $mode #only relevant for instances where we have to build in cloud.
+    srcfile=`readlink -f $2`
+    findRootDir rootDir $srcfile
+
+    #to possibly use for generating arbitrary root passwords for lxc ard qemu? eh. maybe.
+    #pass=`cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 12 | head -n1`
+
+    requireAbs=$srcfile
+    requireRel=1 
+
+    requireList=($srcfile)
+    initRootDir=$rootDir
+    rootDirList=($initRootDir)
+    while : ; do
+        requireRel=`cat $requireAbs | grep -iE '^ *\[ +.MANAGED_BUILD +\] +\|\| +' | sed -r 's/.*?MANAGED_BUILD +\] +\|\| +[\.\.?\/]*(libs\/)*//g' | sed -r 's/\s*$//g'`
+        #sed doesn't have non-capturing groups, so you can't do it all in one regex because of the optional 'libs/' group.        
+        log verbose "initRootDir is $initRootDir"
+        if [ $requireRel ]
+        then
+            repoName=`echo $requireRel | cut -d"/" -f1`
+            if [ -e $rootDir/libs/$requireRel ]
+            then
+                requireAbs=$rootDir/libs/$requireRel
+                rootDir=$rootDir/libs/$repoName
+            elif [ -e `dirname $initRootDir`/$requireRel ]
+            then
+                requireAbs=`dirname $rootDir`/$requireRel
+                rootDir=`dirname $initRootDir`/$repoName
+            elif [ -e $initRootDir/libs/$requireRel ]
+            then
+                requireAbs=$initRootDir/libs/$requireRel
+                rootDir=$initRootDir/libs/$repoName
+            else 
+                path_b=`dirname $initRootDir`/$requireRel
+                error "build script at ${requireAbs}" \
+                "depends on script at path ${requireRel} " \
+                "but it cannot be found at $rootDir/libs/$requireRel " \
+                " or at $path_b " \
+                " or at $initRootDir/libs/$requireRel"
+                exit 1
+            fi       
+            requireList+=($requireAbs)
+            rootDirList+=($rootDir)
+            log verbose "adding path ${requireRel} to require list"
+        else
+            break
+        fi
+    done
+
+    for (( idx=${#requireList[@]}-1 ; idx>=0 ; idx-- )) ; do
+        curDepPath=${requireList[$idx]}
+        curRootDir=${rootDirList[$idx]}
+        len=`expr ${#requireList[@]} - 1`
+        log info "__curscript__: ${curDepPath}"
+        [ $idx -eq 0 ]
+        wasArg=$?;
+        [ $idx -eq $len ]
+        noReqs=$?
+
+        formatName imageName $mode $curDepPath            
+        existsImage $mode $imageName
+        exists=$?
+        if [ $wasArg -eq 0 ] || [ ! $exists -eq 0 ]
+        then
+            if [ $wasArg -eq 0 ] && [ $exists -eq 0 ]
+            then
+                log info "was instructed explicitly to build this image" \
+                " so replacing the old one..."
+                deleteOldImage $mode $imageName
+            else
+                log info " doesn't appear to" \
+                " be built. building... "                
+            fi
+            relPathToScript=`dirname ${curDepPath#"$curRootDir/"}` 
+            scriptFname=`basename $curDepPath`
+            if [ $noReqs -eq 0 ]
+            then
+                log info "no requirements specified in image. loading from debian"
+                log verbose "buildDep $mode fromStock $imageName $curRootDir $relPathToScript $scriptFname"
+                buildDep $mode fromStock $imageName $curRootDir $relPathToScript $scriptFname
+            else
+                log verbose "buildDep $mode fromStock $imageName $curRootDir $relPathToScript $scriptFname $lastImage"
+                buildDep $mode fromImage $imageName $curRootDir $relPathToScript $scriptFname $lastImage
+            fi
+        fi
+        lastImage=$imageName
+    done
+    return 0
+}
+
+#usage
+#./imagerun {mode} {sourcefile} {cmd}
+#cmd can be one of four convenience keywords
+#id, start, stop, destroy
+#id == get imageid
+#or cmd can be any bash command, with the txt \$id in it which will be replaced with imageid
+
+# example gratis:
+# ./imagerun lxc build.sh lxc-info -n \$id -S
+# but if you're doing lots of commands, you're better off doing something like
+# id=imagerun lxc build.sh id
+# lxc-info -n $id -S
+# etc. etc.
+
+run() {
+    getMode mode $1 
+    checkDependencies $mode;
+    srcfile=`readlink -f $2`
+    formatName imageName $mode $srcfile
+    if [ ! $3 ]
+    then
+        echo "please provide a command to run with \\$id in place of the id"
+        echo "or simply one of the following macros: id, start, stop, destroy"
+    fi
+    if [ $mode = "lxc" ]
+    then
+        existsImage $mode $imageName
+        if [ $? -eq 1 ]
+        then
+            error "there doesn't appear to be an image built from that file. please use imagebuild to build it."
+        fi
+        if [ $3 = "id" ]
+        then
+            echo $imageName
+        elif [ $3 = "start" ]
+        then
+            if [ $4 ] && [ ! $5 ]
+            then
+                echo "err, you need to provide the root path and mounted path to mount a vol"                
+            fi
+            if [ $4 ] && [ $5 ]
+            then
+                hostpath=`readlink -f $4 `
+                echo "warning. currently for lxc mounting a volume removes all mount entries after file exits. this is just because I haven't bothered to account for circumstances where you might already have a mount.entry. "
+                echo "lxc.mount.entry = ${hostpath} ${5} none defaults,bind,create=dir 0 0" >> /var/lib/lxc/$imageName/config
+                cat /var/lib/lxc/$imageName/config
+            fi
+            lxc-start -d -n $imageName
+            if [ $4 ] && [ $5 ]
+            then                
+                sed -ri "s/lxc.mount.entry = .*//g" /var/lib/lxc/$imageName/config
+            fi
+
+        elif [ $3 = "stop" ]
+        then
+            lxc-stop -kn $imageName
+        elif [ $3 = "destroy" ]
+        then
+            deleteOldImage lxc $imageName
+        elif [ $3 = "exec" ]
+        then
+            lxc-attach -n $imageName -- ${args[@]:3}
+        else
+            args=( $@ )
+            id=$imageName
+            eval $3 ${args[@]:3} 
+        fi
+    elif [ $mode = "ami" ]
+    then
+        existsImage $mode $imageName
+        if [ $? -eq 1 ]
+        then
+            error "there doesn't appear to be an image built from that file. please use imagebuild to build it."
+        fi
+        if [ $3 = "id" ]
+        then
+            echo $imageName
+        elif [ $3 = "create-stack" ]
+        then
+            if [ ! $4 ] || [ ! $5 ]
+            then
+                error "create-stack requires a <stack name>, <cloudformation file> and any non-authent. params the cloudformation file requires."
+            fi
+            lxc-start -d -n $imageName
+        elif [ $3 = "update-stack" ]
+        then
+            if [ ! $4 ] || [ ! $5 ]
+            then
+                error "update-stack requires a <stack name>, <cloudformation file>, and any non-authent. params the cloudformation file requires."
+            fi
+            echo "don't know how to do this yet"
+            exit 1
+        elif [ $3 = "terminate-buildstack" ]
+        then
+            echo "don't know how to do this yet"
+            exit 1
+        elif [ $3 = "promote-image" ]
+        then
+            if [ ! $4 ]
+            then
+                error "promote-image requires a <new name> for the image being promoted."
+            fi
+            echo "don't know how to do this yet."
+            exit 1
+        elif [ $3 = "destroy-image" ]
+        then
+            #pseudocode
+            deleteOldImage ami $imageName
+        else
+            args=( $@ )
+            id=$imageName
+            eval $3 ${args[@]:3} 
+        fi
+
+        echo "not supported yet"
+    fi
+}
+
+main() {
+    if [ $IMAGE_SCRIPT_MODE ] && [ $IMAGE_SCRIPT_MODE = 'run' ] 
+    then
+        run $@
+    else
+        build $@
+    fi
+}
+
+main $@
