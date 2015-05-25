@@ -15,14 +15,17 @@
 # limitations under the License.
 #
 
-#run.sh <image> <image to mount>
-if [ $2 ]
-then
-    if [ -d $2 ]
-    then
+image="$1"
+mountdir="$2"
+[ $image ] || echo "./run_image.sh <image> (<folder or .img to add as device>)" && exit 1
+
+attach=''
+if [ $mountdir ]; then
+    if [ -d "$mountdir" ]; then
         umount /tmp/dirhost.raw
         rm -f /tmp/dirhost.raw
-        qemu-img create /tmp/dirhost.raw 200M
+        dirsize=`du -s --block-size=1 "$mountdir" | cut -f1`
+        qemu-img create /tmp/dirhost.raw `echo "$dirsize + (50*1024*1024)" | bc`
         yes | mkfs.ext4 /tmp/dirhost.raw 
         mount /tmp/dirhost.raw /mnt
         shopt -s dotglob
@@ -32,7 +35,7 @@ then
     else
         hdb=$2
     fi
-    qemu-system-x86_64 -enable-kvm -cpu host -smp 2 -m 2048 -hda $1 -hdb $hdb
-else
-    qemu-system-x86_64 -enable-kvm -cpu host -smp 2 -m 2048 -hda $1 
+    attach="-hdb $hdb"
 fi
+
+qemu-system-x86_64 -enable-kvm -cpu host -smp 2 -m 2048 -hda $image $attach
