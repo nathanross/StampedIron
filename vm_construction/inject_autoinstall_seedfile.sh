@@ -27,23 +27,16 @@ error() {
     exit 1
 }
 
-if [ ! $WORKDIR ]; then
-    WORKDIR=/opt/build/tmp
-fi
-workdir=$WORKDIR
+d_work=/opt/build/tmp
+[ $WORKDIR ] && d_work=$WORKDIR
 
-if [ ! $DISTRO ]; then
-    DISTRO="debian"
-fi
- 
-workdir=/opt/build/tmp
+dist="debian"
+[ $DISTRO ] && dist=$DISTRO
 
-mkdir -p ${workdir}/iso ${workdir}/newiso
-if [ $DISTRO = "debian" ]; then
-    mkdir -p ${workdir}/irmod
-fi
+mkdir -p ${d_work}/iso ${d_work}/newiso
+[ $dist = "debian" ] && mkdir -p ${d_work}/irmod
 
-rm -rf ${workdir}/newiso/*
+rm -rf ${d_work}/newiso/*
 
 usage=" 
  inject_seedfile.sh <seed file> (<file or dir to copy to cd root>)
@@ -63,45 +56,35 @@ fi
 
 seedpath=`readlink -f $seedfile`
 
-#mount iso and copy its contents to a rw folder
-#if the drive's already mounted, don't remount,
-#but we want a fresh newiso directory in either case
-#for purposes of enabling easy modification / testing of this script
-if [ `mount | grep -i *.iso | wc -l` -eq 0 ]
-then
-    mount -o loop *.iso ${workdir}/iso
+if [ `mount | grep -i *.iso | wc -l` -eq 0 ]; then
+    mount -o loop *.iso ${d_work}/iso
 fi
-if [ $2 ]
-then
-    cp -r $2 ${workdir}/newiso
-fi
-cp -rT ${workdir}/iso ${workdir}/newiso
+
+[ $copydir ] &&  cp -r $copydir ${d_work}/newiso
+
+cp -rT ${d_work}/iso ${d_work}/newiso
 
 
-newiso=${workdir}/newiso
-if [ $DISTRO = "ubuntu" ]
-then
-    echo en > ${newiso}/isolinux/lang
-    sed -ri 's/ (file=.cdrom.preseed.ubuntu-server.seed) *vga=[0-9]+/auto=true locale=en_US console-setup\/layoutcode=us \1 /g' ${newiso}/isolinux/txt.cfg
-    cat $1 ${newiso}/preseed/ubuntu-server.seed > /tmp/tmpseed
+d_newiso=${d_work}/newiso
+if [ $dist = "ubuntu" ]; then
+    echo en > ${d_newiso}/isolinux/lang
+    sed -ri 's/ (file=.cdrom.preseed.ubuntu-server.seed) *vga=[0-9]+/auto=true locale=en_US console-setup\/layoutcode=us \1 /g' ${d_newiso}/isolinux/txt.cfg
+    cat $1 ${d_newiso}/preseed/ubuntu-server.seed > /tmp/tmpseed
     sed -ri 's/(steps.*)(language|timezone|keyboard|user|network),//g' /tmp/tmpseed
     sed -ri 's/timeout +string +[0-9]{1,2}/timeout string 0/g' /tmp/tmpseed
-    cp /tmp/tmpseed ${newiso}/preseed/ubuntu-server.seed
-
-elif [ $DISTRO = "debian" ]
-then
-    sed -ri 's/timeout 0/timeout 1/g' ${newiso}/isolinux/isolinux.cfg
-    #don't know which folder actuall requires it, don't care to find out through A/B testing. Which is the only way to be sure as their documentation on this is shitty.
-    cd ${workdir}/irmod
-    gzip -d < ${newiso}/install.amd/initrd.gz | \
+    cp /tmp/tmpseed ${d_newiso}/preseed/ubuntu-server.seed
+elif [ $dist = "debian" ]; then
+    sed -ri 's/timeout 0/timeout 1/g' ${d_newiso}/isolinux/isolinux.cfg
+    # don't know which folder actually requires it, should find out through A/B testing.
+    # Which is the only way to be sure as their documentation on this is poor.
+    cd ${d_work}/irmod
+    gzip -d < ${d_newiso}/install.amd/initrd.gz | \
         cpio --extract --verbose --make-directories --no-absolute-filenames
     cp $seed ./preseed.cfg
     find . | cpio -H newc --create --verbose | \
-        gzip -9 > ${newiso}/install.amd/initrd.gz
+        gzip -9 > ${d_newiso}/install.amd/initrd.gz
     cd ../
-
 fi
-
 
 #D stands for disable deep directory relocation
 #r stands for rock ridge directory information
@@ -114,5 +97,5 @@ fi
 #this commented out line doesn't work: the reason: the binary and catalog paths must be relative for some silly reason.
 #mkisofs -input-charset utf-8 -D -r -V "ATTENDLESS_UBUNTU" -cache-inodes -J -l bi ${newiso}/isolinux/isolinux.bin -c ${newiso}/isolinux/boot.cat -no-emul-boot -boot-load-size 4 -boot-info-table -o ${workdir}/autoinstall.iso ${newiso}/
 #cd ${newiso}
-genisoimage -input-charset utf-8 -D -r -V "ATTENDLESS_${distro}" -cache-inodes -J -l -b isolinux/isolinux.bin -c isolinux/boot.cat -no-emul-boot -boot-load-size 4 -boot-info-table -o ${workdir}/autoinstall.iso ${newiso}/
+genisoimage -input-charset utf-8 -D -r -V "ATTENDLESS_${distro}" -cache-inodes -J -l -b isolinux/isolinux.bin -c isolinux/boot.cat -no-emul-boot -boot-load-size 4 -boot-info-table -o ${d_work}/autoinstall.iso ${d_newiso}/
 
