@@ -17,7 +17,7 @@
 
 image="$1"
 mountdir="$2"
-[ $image ] || echo "./run_image.sh <image> (<folder or .img to add as device>)" && exit 1
+[ $image ] || ( echo "./run_image.sh <image> (<folder or .img to add as device>)" && exit 1 )
 
 attach=''
 if [ $mountdir ]; then
