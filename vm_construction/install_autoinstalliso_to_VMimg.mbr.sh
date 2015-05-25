@@ -15,17 +15,11 @@
 # limitations under the License.
 #
 
-#!/bin/bash
-if [ ! $WORKDIR ]
-then
-    WORKDIR=/opt/build/tmp
-fi
-workdir=$WORKDIR
+workdir=/opt/build/tmp
+[ $WORKDIR ] && workdir=$WORKDIR
 
-if [ $1 ]
-then
-    size=$1
-else
+size=$1
+if [ ! $size ]; then
     echo "setting image size to default of 14.5gb"
     size=14.5G
 fi

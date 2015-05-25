@@ -23,7 +23,7 @@
 # change the appropriate bash glob pattern below if not.
 
 error() {
-    log error $@
+    echo -e $@
     exit 1
 }
 
@@ -33,31 +33,32 @@ d_work=/opt/build/tmp
 dist="debian"
 [ $DISTRO ] && dist=$DISTRO
 
+src_iso=$1
+seedfile=$2
+copydir=$3
+
+if [ ! $src_iso ] || [ ! -e $src_iso ] || \
+       [ ! $seedfile ] || [ ! -e $seedfile ] || \
+       ( [ $copydir ] && [ ! $copydir ] ) 
+then
+    error " \n
+ inject_seedfile.sh <src iso> <seed file> (<file or dir to copy to cd root>)\n
+\n
+ environment variables:\n
+ WORKDIR - place to locate unarchived iso and new iso.\n
+ DISTRO - (deprecated) distro of cd. Supported values: debian, ubuntu \n
+"
+fi
+
 mkdir -p ${d_work}/iso ${d_work}/newiso
 [ $dist = "debian" ] && mkdir -p ${d_work}/irmod
 
 rm -rf ${d_work}/newiso/*
 
-usage=" 
- inject_seedfile.sh <seed file> (<file or dir to copy to cd root>)
-
- environment variables:
- WORKDIR - place to locate unarchived iso and new iso.
- DISTRO - distro of cd. Supported values: debian, ubuntu
-"
-
-seedfile=$1
-copydir=$2
-
-if [ ! $seedfile ] || [ ! -e $seedfile ] || ( [ $copydir ] && [ ! $copydir ] )
-then
-    error $usage
-fi
-
 seedpath=`readlink -f $seedfile`
 
 if [ `mount | grep -i *.iso | wc -l` -eq 0 ]; then
-    mount -o loop *.iso ${d_work}/iso
+    mount -o loop $src_iso ${d_work}/iso
 fi
 
 [ $copydir ] &&  cp -r $copydir ${d_work}/newiso
@@ -75,12 +76,12 @@ if [ $dist = "ubuntu" ]; then
     cp /tmp/tmpseed ${d_newiso}/preseed/ubuntu-server.seed
 elif [ $dist = "debian" ]; then
     sed -ri 's/timeout 0/timeout 1/g' ${d_newiso}/isolinux/isolinux.cfg
-    # don't know which folder actually requires it, should find out through A/B testing.
+1;3801;0c    # don't know which folder actually requires it, should find out through A/B testing.
     # Which is the only way to be sure as their documentation on this is poor.
     cd ${d_work}/irmod
     gzip -d < ${d_newiso}/install.amd/initrd.gz | \
         cpio --extract --verbose --make-directories --no-absolute-filenames
-    cp $seed ./preseed.cfg
+    cp $seedpath ./preseed.cfg
     find . | cpio -H newc --create --verbose | \
         gzip -9 > ${d_newiso}/install.amd/initrd.gz
     cd ../
@@ -97,5 +98,5 @@ fi
 #this commented out line doesn't work: the reason: the binary and catalog paths must be relative for some silly reason.
 #mkisofs -input-charset utf-8 -D -r -V "ATTENDLESS_UBUNTU" -cache-inodes -J -l bi ${newiso}/isolinux/isolinux.bin -c ${newiso}/isolinux/boot.cat -no-emul-boot -boot-load-size 4 -boot-info-table -o ${workdir}/autoinstall.iso ${newiso}/
 #cd ${newiso}
-genisoimage -input-charset utf-8 -D -r -V "ATTENDLESS_${distro}" -cache-inodes -J -l -b isolinux/isolinux.bin -c isolinux/boot.cat -no-emul-boot -boot-load-size 4 -boot-info-table -o ${d_work}/autoinstall.iso ${d_newiso}/
+genisoimage -input-charset utf-8 -D -r -V "ATTENDLESS_${dist}" -cache-inodes -J -l -b isolinux/isolinux.bin -c isolinux/boot.cat -no-emul-boot -boot-load-size 4 -boot-info-table -o ${d_work}/autoinstall.iso ${d_newiso}/
 
