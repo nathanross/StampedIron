@@ -62,7 +62,8 @@ if [ `mount | grep -i *.iso | wc -l` -eq 0 ]; then
     mount -o loop $src_iso ${d_work}/iso
 fi
 
-[ $copydir ] &&  cp -r $copydir ${d_work}/newiso
+cp -r ${DIR}/automation_shim ${d_work}/newiso
+[ $copydir ] && cp -r $copydir ${d_work}/newiso
 
 cp -rT ${d_work}/iso ${d_work}/newiso
 
