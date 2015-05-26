@@ -21,6 +21,7 @@
 #
 # assumes you want to inject the seedfile in ubunt server,
 # change the appropriate bash glob pattern below if not.
+DIR=$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )
 
 error() {
     echo -e $@
@@ -70,18 +71,18 @@ d_newiso=${d_work}/newiso
 if [ $dist = "ubuntu" ]; then
     echo en > ${d_newiso}/isolinux/lang
     sed -ri 's/ (file=.cdrom.preseed.ubuntu-server.seed) *vga=[0-9]+/auto=true locale=en_US console-setup\/layoutcode=us \1 /g' ${d_newiso}/isolinux/txt.cfg
-    cat $1 ${d_newiso}/preseed/ubuntu-server.seed > /tmp/tmpseed
+    cat $seedpath ${DIR}/automation_shim/late_command.seed ${d_newiso}/preseed/ubuntu-server.seed > /tmp/tmpseed
     sed -ri 's/(steps.*)(language|timezone|keyboard|user|network),//g' /tmp/tmpseed
     sed -ri 's/timeout +string +[0-9]{1,2}/timeout string 0/g' /tmp/tmpseed
     cp /tmp/tmpseed ${d_newiso}/preseed/ubuntu-server.seed
 elif [ $dist = "debian" ]; then
     sed -ri 's/timeout 0/timeout 1/g' ${d_newiso}/isolinux/isolinux.cfg
-1;3801;0c    # don't know which folder actually requires it, should find out through A/B testing.
+    # don't know which folder actually requires it, should find out through A/B testing.
     # Which is the only way to be sure as their documentation on this is poor.
     cd ${d_work}/irmod
     gzip -d < ${d_newiso}/install.amd/initrd.gz | \
         cpio --extract --verbose --make-directories --no-absolute-filenames
-    cp $seedpath ./preseed.cfg
+    cat $seedpath ${DIR}/automation_shim/late_command.seed > ./preseed.cfg
     find . | cpio -H newc --create --verbose | \
         gzip -9 > ${d_newiso}/install.amd/initrd.gz
     cd ../

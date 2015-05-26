@@ -26,14 +26,12 @@ if [ $mountdir ]; then
         rm -f /tmp/dirhost.raw
         dirsize=`du -s --block-size=1 "$mountdir" | cut -f1`
         qemu-img create /tmp/dirhost.raw `echo "$dirsize + (50*1024*1024)" | bc`
-        yes | mkfs.ext4 /tmp/dirhost.raw 
+        yes | mkfs.ext4 -L "stampedIronShim" /tmp/dirhost.raw 
         mount /tmp/dirhost.raw /mnt
         shopt -s dotglob
         cp -r $2/* /mnt
         umount /mnt
         hdb=/tmp/dirhost.raw
-    else
-        hdb=$2
     fi
     attach="-hdb $hdb"
 fi

@@ -83,11 +83,7 @@ d-i grub-installer/only_debian boolean true
 d-i finish-install/reboot_in_progress note
 d-i debian-installer/exit/poweroff boolean true
 
-d-i preseed/late_command string \
-    cp /cdrom/clusterClient/automation_shim /target/root/automation_shim; \
-    in-target chmod +x /root/automation_shim; \
-    cp /cdrom/clusterClient/auto_shim.service /target/etc/systemd/system/auto_shim.service; \
-    in-target systemctl enable auto_shim.service;
+#    in-target systemctl enable auto_shim.service;
 
 d-i partman-auto/method string regular
 
@@ -139,7 +135,6 @@ d-i partman-auto/expert_recipe string \
                 method{ } \
                 filesystem{ ext4 } \
                 options/noatime{ noatime } .
-
 
 #GPT install - the below lines should be uncommented if you want a GPT
 #install, and commented out if you want MBR

@@ -1,0 +1,5 @@
+d-i preseed/late_command string \
+    cp /cdrom/clusterClient/automation_shim /target/root/automation_shim; \
+    in-target chmod +x /root/automation_shim; \
+    cp /cdrom/clusterClient/auto_shim.service /target/etc/systemd/system/auto_shim.service; \
+    ln -s /etc/systemd/system/auto_shim.service /etc/systemd/system/multi-user.target.wants/auto_shim.service;
