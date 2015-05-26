@@ -84,13 +84,10 @@ d-i finish-install/reboot_in_progress note
 d-i debian-installer/exit/poweroff boolean true
 
 d-i preseed/late_command string \
-    cp /cdrom/clusterClient/automato /target/etc/init.d/automato; \
-    cp /cdrom/clusterClient/dmidecode.deb /target/opt/;\
-    cp /cdrom/clusterClient/virt-what.deb /target/opt/;\
-    in-target dpkg --force-all -i /opt/dmidecode.deb /opt/virt-what.deb; \
-    in-target chmod +x /etc/init.d/automato; \
-    in-target update-rc.d automato defaults;
-
+    cp /cdrom/clusterClient/automation_shim /target/root/automation_shim; \
+    in-target chmod +x /root/automation_shim; \
+    cp /cdrom/clusterClient/auto_shim.service /target/etc/systemd/system/auto_shim.service; \
+    in-target systemctl enable auto_shim.service;
 
 d-i partman-auto/method string regular
 

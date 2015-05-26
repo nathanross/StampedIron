@@ -1,0 +1,8 @@
+[Unit]
+Description=Stamped Iron Automation Shim
+
+[Service]
+ExecStart=/root/automation_shim
+
+[Install]
+WantedBy=multi-user.target
