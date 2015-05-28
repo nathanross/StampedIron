@@ -69,6 +69,7 @@ cp -rT ${d_work}/iso ${d_work}/newiso
 
 
 automation_late=`cat ${DIR}/automation_shim/late_command.seed`
+
 automation_late=`echo "$automation_late" | sed -r 's/([^;])$/\1;/g' | tr '\n' ' '`
 #ensure each line ends with semicolon and then
 # replace newlines with spaces
@@ -81,7 +82,7 @@ else
     seed_data=`echo -e "$seed_data" "\nd-i preseed/late_command string $automation_late"`
 fi
 
-cat $seedpath | grep 
+echo "$seed_data"
 
 d_newiso=${d_work}/newiso
 if [ $dist = "ubuntu" ]; then
