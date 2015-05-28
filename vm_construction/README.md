@@ -1,6 +1,17 @@
 #Vm_construction
 
-this directory contains tools for:
+The goal of StampedIron's VM Construction toolset is to make security conscious VM Build Automation easy.:
+
+ * A hands-off open-source VM disk image creation, distro install and recipe bootstrapping process
+ * that doesn't require your trust in the security of a complex third party tool or its distro templates
+ * that makes use of an existing vanilla debian, ubuntu server, or RHEL iso.
+ * is simple enough to read and understand in entirety in half of a workday.
+
+  There are many testability and security benefits to all your server instances starting on the same, trusted, foundation. Third-party binaries are subject to repository integrity attacks, security oversights, and human error. In addition, third party distro templates (including lxc) are seemingly universally configured and packaged in undocumented ways different than that in a vanilla distro install. 
+
+  There are some tools that do similar work. Simple-cdd is a nice tool, but focuses on debian alone, uses a non-default set of packages and configuration, and prioritize user interface over absolute simplicity.
+
+  The idea of this tool isn't to solve any problems in any new, or particularly interesting way. Rather in the most predictable way such that a sysadmin is concerned about the major chain-of-trust problems inherent in container and VM build automation tools, and resigns to rolling their own, can basically look at these scripts and, without having to dig through unrelated complexity, see many exact same steps he would have taken, and either use it as a guide or as it is.
 
 ##inject_seedfile:
 
