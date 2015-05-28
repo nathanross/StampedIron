@@ -1,8 +1,8 @@
 #Vm_construction
 
-The goal of StampedIron's VM Construction toolset is to make security conscious VM Build Automation easy.:
+The goal of StampedIron's VM Construction toolset is to make security conscious VM AND bare-metal-install Build Automation easy.:
 
- * A hands-off open-source VM disk image creation, distro install and recipe bootstrapping process
+ * A hands-off open-source autoinstall ISO creation, VM disk image creation, distro install and recipe bootstrapping pipeline
  * that doesn't require your trust in the security of a complex third party tool or its distro templates
  * that makes use of an existing vanilla debian, ubuntu server, or RHEL iso.
  * is simple enough to read and understand in entirety in half of a workday.
@@ -33,3 +33,8 @@ Because I don't want to preclude composing an image out of multiple bash recipes
 
 2. (From within the VM, as root) rm /etc/systemd/system/auto_shim.service /etc/systemd/system/multi-user.target.wants/auto_shim.service
 
+## Package caching
+
+  in the examples/squid directory is an image you can use to create a package cache. 
+  
+  
