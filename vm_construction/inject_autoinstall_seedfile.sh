@@ -68,11 +68,26 @@ cp -r ${DIR}/automation_shim ${d_work}/newiso
 cp -rT ${d_work}/iso ${d_work}/newiso
 
 
+automation_late=`cat ${DIR}/automation_shim/late_command.seed`
+automation_late=`echo "$automation_late" | sed -r 's/([^;])$/\1;/g' | tr '\n' ' '`
+#ensure each line ends with semicolon and then
+# replace newlines with spaces
+seed_data=`cat $seedpath`
+
+if [ `echo $seed_data | grep -E '^d-i preseed/late_command string ' $seedpath | wc -l` -gt 0 ]
+then
+    seed_data=`echo "$seed_data" | sed -r "s@^(d-i preseed/late_command string) @\1 $automation_late @"`
+else
+    seed_data=`echo -e "$seed_data" "\nd-i preseed/late_command string $automation_late"`
+fi
+
+cat $seedpath | grep 
+
 d_newiso=${d_work}/newiso
 if [ $dist = "ubuntu" ]; then
     echo en > ${d_newiso}/isolinux/lang
     sed -ri 's/ (file=.cdrom.preseed.ubuntu-server.seed) *vga=[0-9]+/auto=true locale=en_US console-setup\/layoutcode=us \1 /g' ${d_newiso}/isolinux/txt.cfg
-    cat $seedpath ${DIR}/automation_shim/late_command.seed ${d_newiso}/preseed/ubuntu-server.seed > /tmp/tmpseed
+    echo -e "$seed_data \n" | cat - ${d_newiso}/preseed/ubuntu-server.seed > /tmp/tmpseed
     sed -ri 's/(steps.*)(language|timezone|keyboard|user|network),//g' /tmp/tmpseed
     sed -ri 's/timeout +string +[0-9]{1,2}/timeout string 0/g' /tmp/tmpseed
     cp /tmp/tmpseed ${d_newiso}/preseed/ubuntu-server.seed
@@ -83,7 +98,7 @@ elif [ $dist = "debian" ]; then
     cd ${d_work}/irmod
     gzip -d < ${d_newiso}/install.amd/initrd.gz | \
         cpio --extract --verbose --make-directories --no-absolute-filenames
-    cat $seedpath ${DIR}/automation_shim/late_command.seed > ./preseed.cfg
+    echo "$seed_data" > ./preseed.cfg
     find . | cpio -H newc --create --verbose | \
         gzip -9 > ${d_newiso}/install.amd/initrd.gz
     cd ../
