@@ -26,10 +26,11 @@ cp *.sh /usr/local/bin
 sysctl net.ipv4.ip_forward=1
 sysctl net.ipv6.conf.default.forwarding=1
 sysctl net.ipv6.conf.all.forwarding=1
-iptables -t nat -A POSTROUTING -o internet0 -j MASQUERADE
+iptables -t nat -A POSTROUTING -o eth0 -j MASQUERADE
 iptables -I FORWARD -m conntrack --ctstate RELATED,ESTABLISHED -j ACCEPT
-iptables -I FORWARD -i net0 -o internet0 -j ACCEPT
+iptables -I FORWARD -o eth0 -j ACCEPT
 iptables -I FORWARD -m physdev --physdev-is-bridged -j ACCEPT
+echo '1' > /proc/sys/net/ipv4/ip_forward
 
 #bring up bridge interface
 service networking restart
