@@ -36,4 +36,4 @@ if [ $mountdir ]; then
     attach="-hdb $hdb"
 fi
 
-qemu-system-x86_64 -enable-kvm -cpu host -smp 2 -m 2048 -hda $image $attach
+qemu-system-x86_64 -enable-kvm -cpu host -smp 2 -m 2048 $QEMU_OPTS -hda $image $attach
