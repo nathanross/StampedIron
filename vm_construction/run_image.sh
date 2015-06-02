@@ -22,7 +22,9 @@ mountdir="$2"
 attach=''
 if [ $mountdir ]; then
     if [ -d "$mountdir" ]; then
-        umount /tmp/dirhost.raw
+        if [ -e /tmp/dirhost.raw]; then
+            umount /tmp/dirhost.raw
+        fi
         rm -f /tmp/dirhost.raw
         dirsize=`du -s --block-size=1 "$mountdir" | cut -f1`
         qemu-img create /tmp/dirhost.raw `echo "$dirsize + (50*1024*1024)" | bc`
