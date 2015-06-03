@@ -68,15 +68,14 @@ main() {
 
     rm -rf ${d_work}/newiso/*
 
-    local seedpath=`readlink -f $seedfile`
-
     # if iso is not mounted mount it.
     grep -qs `basename $src_iso` /proc/mounts || \
         mount -o loop ${src_iso} ${d_mntiso}
     
     # copy over mounted comments to a new directory
-    #-T option is so if newiso dir is already created, copy
-    # original dir over same path instead of subdirectory
+    #-T option is so it copies into the dir rather
+    # then creating a subdir. The reason we don't use a wildcard
+    # here is hidden files, shopt dotglob compatibility problem potential.
     cp -rT ${d_mntiso} ${d_newiso}
 
     # the automation shim is used to run
@@ -97,7 +96,7 @@ main() {
         local seed_data='';
         append_late_command seed_data \
                             `cat ${DIR}/automation_shim/late_command.seed` \
-                            `cat $seedpath`        
+                            `cat $seedfile`
         #echo "$seed_data"
 
         if [ $dist = "ubuntu" ]; then
@@ -114,7 +113,7 @@ main() {
             cd ${d_work}/irmod
             gzip -d < ${d_newiso}/install.amd/initrd.gz | \
                 cpio --extract --make-directories --no-absolute-filenames
-            echo "$seed_data" > ./preseed.cfg
+            echo ${seed_data} > ./preseed.cfg
             find . | cpio -H newc --create | \
                 gzip -9 > ${d_newiso}/install.amd/initrd.gz
             cd ../
