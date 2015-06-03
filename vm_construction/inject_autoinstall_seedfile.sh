@@ -23,11 +23,18 @@
 # change the appropriate bash glob pattern below if not.
 DIR=$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )
 export IFS=''
+export WORKDIR=${WORKDIR:-"/opt/build/tmp"}
 
 error() { echo -e $@; exit 1 }
+
 mkdtmp() {
     local -n l=$1;
-    l=`mktemp -d 2>/dev/null || mktemp -d -t 'mytmpdir'`
+    if [ $WORKDIR ];
+       l="${WORKDIR}/`date +%s`"
+       mkdir -p $l
+    else
+        l=`mktemp -d 2>/dev/null || mktemp -d -t 'mytmpdir'`
+    fi
 }
 
 append_late_command() {
@@ -71,29 +78,27 @@ mod_debian() {
 }
 
 main() {
-    local src_iso=$1 seedfile=$2 copydir=$3
+    local src_iso=$1 out_iso=$2 seedfile=$3 copydir=$4
     
-    local d_work=${WORKDIR:-"/opt/build/tmp"}
     local dist=${DISTRO:-"debian"}
 
     [ ! -e ${src_iso} ] || \
         [ ! -e ${seedfile} ] || \
         ( [ $copydir ] && [ ! -e ${copydir} ] ) || \
         error " \n
- inject_seedfile.sh <src iso> <seed file> (<file or dir to copy to cd root>)\n
+ inject_seedfile.sh <src iso> <out iso> <seed file> (<file or dir to copy to cd root>)\n
 \n
  environment variables:\n
- WORKDIR - place to locate unarchived iso and new iso.\n
+ WORKDIR - store temporary files HERE instead of temp directory.\n
  DISTRO - (deprecated) distro of cd. Supported values: debian, ubuntu \n
 "
 
-    local d_mntiso=${d_work}/iso
-    local d_newiso=${d_work}/newiso
+    local d_mntiso='' d_newiso=''
+    mkdtmp d_newiso
+    mkdtmp $d_mntiso
     
     mkdir -p ${d_mntiso} ${d_newiso}
     [ $dist = "debian" ] && mkdir -p ${d_work}/irmod
-
-    rm -rf ${d_work}/newiso/*
 
     # if iso is not mounted mount it.
     grep -qs `basename $src_iso` /proc/mounts || \
@@ -142,6 +147,9 @@ main() {
     #cd ${newiso}
     genisoimage -input-charset utf-8 -D -r -V "ATTENDLESS_${dist}" -cache-inodes -J -l -b isolinux/isolinux.bin -c isolinux/boot.cat -no-emul-boot -boot-load-size 4 -boot-info-table -o ${d_work}/autoinstall.iso ${d_newiso}/
 
+    umount ${d_mntiso}
+    rm -rf ${d_mntiso}
+    rm -rf ${d_newiso}
 }
 
 main $@
