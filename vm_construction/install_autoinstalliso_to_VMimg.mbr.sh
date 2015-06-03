@@ -14,22 +14,27 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
+DIR=$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )
+export IFS=''
+error() { echo -e $@; exit 1 }
 
-workdir=/opt/build/tmp
-[ $WORKDIR ] && workdir=$WORKDIR
+main() {
+    local -r autoinstall_iso=$1 out_device=$2 size=${3:-"14.5G"}
 
-size=$1
-if [ ! $size ]; then
-    echo "setting image size to default of 14.5gb"
-    size=14.5G
-fi
+    #usage
+    ([ ! -e $autoinstall_iso ] || \
+        [ ! $out_image ]) && \
+        error "\n
+install_autoinstall_iso.sh <autoinstall_iso> <out_device> (<new_disk_size>)\n
+\n
+    <out_device>: device or disk image to install to.\n
+       if a non-existent path, creates raw .img of size <new_disk_size> \n
+\n
+    <new_disk_size> defaults to 14.5gb
+"
+    
+    [ ! -e $out_device ] && qemu-img create $out_device $size
+    ${DIR}/./run-image.sh $out_device $autoinstall_iso 1
+}
 
-#if [ $1 = "/dev/sda" ]
-#then
-#    echo "error: you specified the first hard disk as the install drive. You almost certainly don't want this. You'll get the biggest security benefit of this system (easy on-the-go full disk hash). having a system that is hard to carry with you. if you want to persist to hard drive, a better approach would be to install to a usb master, and put either usb in the comp, boot to ram, then copy usb contents to hard disk. don't forget to make an extra usb slave in case of disk failure of the first and you don't have time that day to spend an hour writing 8gb over usb 2.0"
-#    exit
-#fi
-
-rm -f $workdir/disk.raw
-qemu-img create $workdir/disk.raw $size
-nice -n 8 qemu-system-x86_64 -enable-kvm -cpu host -smp cpus=2 -cdrom $workdir/autoinstall.iso -boot order=d -m 2048 $workdir/disk.raw
+main $@

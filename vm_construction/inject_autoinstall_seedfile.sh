@@ -39,22 +39,22 @@ mkdtmp() {
 
 append_late_command() {
     local -n ret_string=$1
-    local shellscript=$2 seed_data=$3
+    local -r shellscript=$2 seed_data=$3
     
     #ensure each line ends with semicolon and then
     # replace newlines with spaces
-    shellscript=`echo "$shellscript" | sed -r 's/([^;])$/\1;/g' | tr '\n' ' '`
+    shellscript_cat=`echo "$shellscript" | sed -r 's/([^;])$/\1;/g' | tr '\n' ' '`
     
-    if [ `echo "$seed_data" | grep -E '^d-i preseed/late_command string ' $seedpath | wc -l` -gt 0 ]
+    if [ `echo "$seed_data" | grep -E '^d-i preseed/late_command string ' | wc -l` -gt 0 ]
     then
-        ret_string=`echo -e "$seed_data" | sed -r "s@^(d-i preseed/late_command string) @\1 $shellscript @"`
+        ret_string=`echo -e "$seed_data" | sed -r "s@^(d-i preseed/late_command string) @\1 $shellscript_cat @"`
     else
-        ret_string=`echo -e "$seed_data" "\nd-i preseed/late_command string $shellscript"`
+        ret_string=`echo -e "$seed_data" "\nd-i preseed/late_command string $shellscript_cat"`
     fi
 }
 
 mod_ubuntu() {
-    local d_cdroot=$1 seed_final=$2
+    local -r d_cdroot=$1 seed_final=$2
     echo en > ${d_cdroot}/isolinux/lang
     sed -ri 's/ (file=.cdrom.preseed.ubuntu-server.seed) *vga=[0-9]+/auto=true locale=en_US console-setup\/layoutcode=us \1 /g' ${d_cdroot}/isolinux/txt.cfg
     echo -e "$seed_final \n" | cat - ${d_cdroot}/preseed/ubuntu-server.seed > /tmp/tmpseed
@@ -64,7 +64,7 @@ mod_ubuntu() {
 }
 
 mod_debian() {
-    local d_cdroot=$1 seed_final=$2
+    local -r d_cdroot=$1 seed_final=$2
     sed -ri 's/timeout 0/timeout 1/g' ${d_cdroot}/isolinux/isolinux.cfg
     mkdtmp d_initrd_fix
     cd $d_initrd_fix
@@ -78,13 +78,13 @@ mod_debian() {
 }
 
 main() {
-    local src_iso=$1 out_iso=$2 seedfile=$3 copydir=$4
+    local -r src_iso=$1 out_iso=$2 seedfile=$3 copydir=$4
     
     local dist=${DISTRO:-"debian"}
 
-    [ ! -e ${src_iso} ] || \
+    ([ ! -e ${src_iso} ] || \
         [ ! -e ${seedfile} ] || \
-        ( [ $copydir ] && [ ! -e ${copydir} ] ) || \
+        ( [ $copydir ] && [ ! -e ${copydir} ] )) && \
         error " \n
  inject_seedfile.sh <src iso> <out iso> <seed file> (<file or dir to copy to cd root>)\n
 \n

@@ -1,12 +1,9 @@
 <domain type='kvm'>
   <name>$name</name>
-  <memory>219200</memory>
-  <vcpu>1</vcpu>
+  <memory>$mem</memory>
+  <vcpu>$vcpu</vcpu>
   <os>
     <type arch='x86_64'>hvm</type>
-    <boot dev='disk'/>
-    <boot dev='secondary'/>
-    <bootmenu enable='yes' timeout='3000' />
   </os>
   <clock sync="localtime"/>
   <devices>
@@ -15,12 +12,14 @@
       <driver name='qemu' type='raw'/>
       <source file='$l_disk'/>
       <target dev='sda'/>
+      <boot order='$bootorder_disk' />
     </disk>
     <disk type='file' device='secondary'>
       <driver name='qemu' type='raw'/>
       <source file='$l_cdrom'/>
       <target dev='sdb'/>
       <address type='drive'/>
+      <boot order='$bootorder_secondary' />
     </disk>
     <interface type='network'>
       <source network='default'/>
