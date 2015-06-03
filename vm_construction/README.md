@@ -6,6 +6,7 @@ The goal of StampedIron's VM Construction toolset is to make security conscious 
  * that doesn't require your trust in the security of a complex third party tool or its distro templates
  * that makes use of an existing vanilla debian, ubuntu server, or RHEL iso.
  * is simple enough to read and understand in entirety in half of a workday.
+ * requires no familiarity with a specific scripting language beyond bash
 
   There are many testability and security benefits to all your server instances starting on the same, trusted, foundation. Third-party binaries are subject to repository integrity attacks, security oversights, and human error. In addition, third party distro templates (including lxc) are seemingly universally configured and packaged in undocumented ways different than that in a vanilla distro install. 
 
