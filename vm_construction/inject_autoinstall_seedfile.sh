@@ -148,8 +148,7 @@ main() {
     genisoimage -input-charset utf-8 -D -r -V "ATTENDLESS_${dist}" -cache-inodes -J -l -b isolinux/isolinux.bin -c isolinux/boot.cat -no-emul-boot -boot-load-size 4 -boot-info-table -o ${d_work}/autoinstall.iso ${d_newiso}/
 
     umount ${d_mntiso}
-    rm -rf ${d_mntiso}
-    rm -rf ${d_newiso}
+    rm -rf ${d_mntiso} ${d_newiso}
 }
 
 main $@
