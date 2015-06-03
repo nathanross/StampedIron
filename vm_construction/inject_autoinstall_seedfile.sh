@@ -24,15 +24,11 @@
 DIR=$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )
 export IFS=''
 
-error() {
-    echo -e $@
-    exit 1
-}
+error() { echo -e $@; exit 1 }
 
 append_late_command() {
     local -n ret_string=$1
-    local shellscript=$2
-    local seed_data=$3
+    local shellscript=$2 seed_data=$3
     
     #ensure each line ends with semicolon and then
     # replace newlines with spaces
@@ -48,17 +44,14 @@ append_late_command() {
 }
 
 main() {
+    local src_iso=$1 seedfile=$2 copydir=$3
+    
     local d_work=${WORKDIR:-"/opt/build/tmp"}
     local dist=${DISTRO:-"debian"}
 
-    local src_iso=$1
-    local seedfile=$2
-    local copydir=$3
-
-    if [ ! -e $src_iso ] || \
-           [ ! -e $seedfile ] || \
-           ( [ $copydir ] && [ ! -e $copydir ] ) 
-    then
+    [ ! -e ${src_iso} ] || \
+        [ ! -e ${seedfile} ] || \
+        ( [ $copydir ] && [ ! -e ${copydir} ] ) || \
         error " \n
  inject_seedfile.sh <src iso> <seed file> (<file or dir to copy to cd root>)\n
 \n
@@ -66,12 +59,11 @@ main() {
  WORKDIR - place to locate unarchived iso and new iso.\n
  DISTRO - (deprecated) distro of cd. Supported values: debian, ubuntu \n
 "
-    fi
 
     local d_mntiso=${d_work}/iso
     local d_newiso=${d_work}/newiso
     
-    mkdir -p $d_mntiso $d_newiso
+    mkdir -p ${d_mntiso} ${d_newiso}
     [ $dist = "debian" ] && mkdir -p ${d_work}/irmod
 
     rm -rf ${d_work}/newiso/*
@@ -102,11 +94,10 @@ main() {
         # command is extant in the user's preseed, the shim
         # late command is appended to it.
 
-        local shim_script=`cat ${DIR}/automation_shim/late_command.seed`
-        local seed_original=`cat $seedpath`
-        local seed_final='';
-        append_late_command seed_data ${shim_script} ${seed_original}
-
+        local seed_data='';
+        append_late_command seed_data \
+                            `cat ${DIR}/automation_shim/late_command.seed` \
+                            `cat $seedpath`        
         #echo "$seed_data"
 
         if [ $dist = "ubuntu" ]; then
@@ -129,6 +120,7 @@ main() {
             cd ../
         fi
     fi
+    
     #D stands for disable deep directory relocation
     #r stands for rock ridge directory information
     #V "" stands for the volume ID name.
