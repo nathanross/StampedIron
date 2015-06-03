@@ -1,0 +1,30 @@
+<domain type='kvm'>
+  <name>$name</name>
+  <memory>219200</memory>
+  <vcpu>1</vcpu>
+  <os>
+    <type arch='x86_64'>hvm</type>
+    <boot dev='disk'/>
+    <boot dev='secondary'/>
+    <bootmenu enable='yes' timeout='3000' />
+  </os>
+  <clock sync="localtime"/>
+  <devices>
+    <emulator>/usr/bin/qemu-kvm</emulator>
+    <disk type='file' device='disk'>
+      <driver name='qemu' type='raw'/>
+      <source file='$l_disk'/>
+      <target dev='sda'/>
+    </disk>
+    <disk type='file' device='secondary'>
+      <driver name='qemu' type='raw'/>
+      <source file='$l_cdrom'/>
+      <target dev='sdb'/>
+      <address type='drive'/>
+    </disk>
+    <interface type='network'>
+      <source network='default'/>
+    </interface>
+    <graphics type='vnc' port='-1' />
+  </devices>
+</domain>
