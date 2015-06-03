@@ -25,6 +25,10 @@ DIR=$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )
 export IFS=''
 
 error() { echo -e $@; exit 1 }
+mkdtmp() {
+    local -n l=$1;
+    l=`mktemp -d 2>/dev/null || mktemp -d -t 'mytmpdir'`
+}
 
 append_late_command() {
     local -n ret_string=$1
@@ -40,7 +44,30 @@ append_late_command() {
     else
         ret_string=`echo -e "$seed_data" "\nd-i preseed/late_command string $shellscript"`
     fi
+}
 
+mod_ubuntu() {
+    local d_cdroot=$1 seed_final=$2
+    echo en > ${d_cdroot}/isolinux/lang
+    sed -ri 's/ (file=.cdrom.preseed.ubuntu-server.seed) *vga=[0-9]+/auto=true locale=en_US console-setup\/layoutcode=us \1 /g' ${d_cdroot}/isolinux/txt.cfg
+    echo -e "$seed_final \n" | cat - ${d_cdroot}/preseed/ubuntu-server.seed > /tmp/tmpseed
+    sed -ri 's/(steps.*)(language|timezone|keyboard|user|network),//g' /tmp/tmpseed
+    sed -ri 's/timeout +string +[0-9]{1,2}/timeout string 0/g' /tmp/tmpseed
+    cp /tmp/tmpseed ${d_cdroot}/preseed/ubuntu-server.seed
+}
+
+mod_debian() {
+    local d_cdroot=$1 seed_final=$2
+    sed -ri 's/timeout 0/timeout 1/g' ${d_cdroot}/isolinux/isolinux.cfg
+    mkdtmp d_initrd_fix
+    cd $d_initrd_fix
+    gzip -d < ${d_newiso}/install.amd/initrd.gz | \
+        cpio --extract --make-directories --no-absolute-filenames
+    echo ${seed_data} > ./preseed.cfg
+    find . | cpio -H newc --create | \
+        gzip -9 > ${d_newiso}/install.amd/initrd.gz
+    cd ../
+    rm -f $d_initrd_fix    
 }
 
 main() {
@@ -98,26 +125,8 @@ main() {
                             `cat ${DIR}/automation_shim/late_command.seed` \
                             `cat $seedfile`
         #echo "$seed_data"
-
-        if [ $dist = "ubuntu" ]; then
-            echo en > ${d_newiso}/isolinux/lang
-            sed -ri 's/ (file=.cdrom.preseed.ubuntu-server.seed) *vga=[0-9]+/auto=true locale=en_US console-setup\/layoutcode=us \1 /g' "${d_newiso}/isolinux/txt.cfg"
-            echo -e "$seed_data \n" | cat - ${d_newiso}/preseed/ubuntu-server.seed > /tmp/tmpseed
-            sed -ri 's/(steps.*)(language|timezone|keyboard|user|network),//g' /tmp/tmpseed
-            sed -ri 's/timeout +string +[0-9]{1,2}/timeout string 0/g' /tmp/tmpseed
-            cp /tmp/tmpseed ${d_newiso}/preseed/ubuntu-server.seed
-        elif [ $dist = "debian" ]; then
-            sed -ri 's/timeout 0/timeout 1/g' ${d_newiso}/isolinux/isolinux.cfg
-            # don't know which folder actually requires it, should find out through A/B testing.
-            # Which is the only way to be sure as their documentation on this is poor.
-            cd ${d_work}/irmod
-            gzip -d < ${d_newiso}/install.amd/initrd.gz | \
-                cpio --extract --make-directories --no-absolute-filenames
-            echo ${seed_data} > ./preseed.cfg
-            find . | cpio -H newc --create | \
-                gzip -9 > ${d_newiso}/install.amd/initrd.gz
-            cd ../
-        fi
+        [ $dist = "ubuntu" ] && mod_ubuntu $d_newiso $seed_data
+        [ $dist = "debian" ] && mod_debian $d_newiso $seed_data
     fi
     
     #D stands for disable deep directory relocation
