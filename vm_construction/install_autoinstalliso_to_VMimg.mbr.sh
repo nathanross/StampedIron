@@ -34,7 +34,7 @@ install_autoinstall_iso.sh <autoinstall_iso> <out_device> (<new_disk_size>)\n
 "
     
     [ ! -e $out_device ] && qemu-img create $out_device $size
-    ${DIR}/./run-image.sh $out_device $autoinstall_iso 1
+    ${DIR}/./run-image.sh ${out_device}:2 ${autoinstall_iso}:1
 }
 
 main $@

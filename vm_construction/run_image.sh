@@ -17,13 +17,9 @@
 
 export IFS=''
 error() { echo -e $@; exit 1 }
-
-main() {
-    local -r image=$1 sdb_in=$2
-    ([ ! -e $image ] || \
-        ([ $sdb_in ] && [ ! -e $sdb_in ])) && \
-        error "\n
-run_image.sh <image> (<folder or .img to add as sdb>)\n
+usage() {
+    error "\n
+run_image.sh <image>:prio (<folder or .img to add as sdb>:prio)\n
 this script is for building images using the automation shim, or launching\n
 an image with boilerplate settings for debugging.\n
 \n
@@ -34,33 +30,68 @@ hypervisor leveraging tool / VMM like Qemu, Virtualbox, VMWare, etc.\n
 \n
 
 environment vars:
-INSTANCE_NAME = name to give to instance
+NAME = name to give to instance
 VCPU= num of vcpus. 2 is default
 MEM= amount of mem to use in KB. 219200 is default
-BOOT_ORDER=
+BOOT_PRIO= 'sdb' or 'sda' depending on whether primary or secondary disk should have boot prio
 
 "
-
-    attach=''
-    if [ $sdb_in ]; then
-        if [ -d "$mountdir" ]; then
-            if [ -e /tmp/dirhost.raw]; then
-                umount /tmp/dirhost.raw
-            fi
-            rm -f /tmp/dirhost.raw
-            dirsize=`du -s --block-size=1 "$mountdir" | cut -f1`
-            qemu-img create /tmp/dirhost.raw `echo "$dirsize + (50*1024*1024)" | bc`
-            yes | mkfs.ext4 -L "stampedIronShim" /tmp/dirhost.raw 
-            mount /tmp/dirhost.raw /mnt
-            shopt -s dotglob
-            cp -r $2/* /mnt
-            umount /mnt
-            hdb=/tmp/dirhost.raw
-        fi
-        attach="-hdb $hdb"
+}
+mkdtmp() {
+    local -n l=$1;
+    if [ $WORKDIR ];
+       l="${WORKDIR}/`date +%s`"
+       mkdir -p $l
+    else
+        l=`mktemp -d 2>/dev/null || mktemp -d -t 'mytmpdir'`
     fi
+}
 
-    qemu-system-x86_64 -enable-kvm -cpu host -smp 2 -m 2048 $QEMU_OPTS -hda $image $attach
+mkRoImage() {
+    local -n l_newdisk=$1;
+    local -r d_src=$2 d_tmp=$3;
+    dirsize=`du -s --block-size=1 "$d_src" | cut -f1`
+    l_newdisk=$d_tmp/`date +%s%N`.raw
+    qemu-img create $l_newdisk `echo "$dirsize + (50*1024*1024)" | bc`
+    i=`expr $i + 1`
+    yes | mkfs.ext4 -L "stampedIronShim" 
+    mount $l_newdisk $tmpdir/mnt
+    cp -rT $src_dir $tmpdir/mnt
+    umount $l_newdisk
+}
+
+main() {
+    local -r name=${NAME:-vcon`date +%s`}, vcpu=${VCPU:-2} mem=${MEM:-219200}
+    local disks='' bootprio='' l_disk=''    
+    
+    mkdtmp tmpdir
+    i=0
+    for x in ${@[*]}
+    do
+        arr_disk=(${x//:/ })
+        l_disk=${arr_disk[0]}
+        bootprio=${arr_disk[1]}
+        mkdir $tmpdir/mnt
+        [ ! -e $l_disk ] && \
+            error "asked to use disk at $l_disk but no file/dir exists there"
+        
+        [ -d $l_disk ] && mkRoImage l_disk $l_disk $tmpdir        
+        bootprio=${arr_disk[1]}
+        disks="${disks}\n<disk type='file' device='disk'>
+      <driver name='qemu' type='raw'/>
+      <source file='${l_disk}'/>
+      <target dev='sda'/>
+      <boot order='${bootprio}' />
+    </disk>"
+    done
+    
+    [ ! $disks ] && usage
+    xml=`envsubst '$name:$mem:$vcpu:$disks' < ${DIR}/virsh/domain.xml`
+    echo $xml | virsh create -
+    
+    #virsh start $name
+    #virsh remove $name
+    rm -rf $tmpdir
     
 }
 
