@@ -1,18 +1,21 @@
 #StampedIron
 
-The goal of StampedIron is to make security conscious VM AND bare-metal-install Build Automation easy.:
+Stamped Iron is a short, readable, and fully-functional proof-of-concept of a server imaging approach that addresses a security gap endemic to emerging server imaging technologies.
 
- * A hands-off open-source autoinstall ISO creation, VM disk image creation, distro install and recipe bootstrapping pipeline
- * that doesn't require your trust in the security of a complex third party tool or its distro templates
- * that makes use of an existing vanilla debian, ubuntu server, or RHEL iso.
+It demonstrates that bootstrapping a server image script:
+
+ * **doesn't require trust in the security of a complex third party tool or its distro templates**
+ * **makes use of an existing vanilla debian, ubuntu server, or RHEL iso.**
  * is simple enough to read and understand in entirety in half of a workday.
  * requires no familiarity with a specific scripting language beyond bash
 
-  There are many testability and security benefits to all your server instances starting on the same, trusted, foundation. Third-party binaries are subject to repository integrity attacks, security oversights, and human error. In addition, third party distro templates (including lxc) are seemingly universally configured and packaged in undocumented ways different than that in a vanilla distro install. 
+  There are many testability and security benefits to all your server instances starting on the same, trusted, foundation. When Debian and RHEL issue security updates, they issue them in response to vulnerabilities and conditions within the vanilla OS packaging and configuration.
 
-  There are some tools that do similar work. Simple-cdd is a nice tool, but focuses on debian alone, uses a non-default set of packages and configuration, and prioritize user interface over absolute simplicity.
+  An increasing diversity of imaging and tools require or expect the provisioning of custom spins or treatments of distros that are seemingly universally configured and packaged using undocumented differences from the vanilla install.
 
-  The idea of this tool isn't to solve any problems in any new, or particularly interesting way. Rather in the most predictable way such that a sysadmin is concerned about the major chain-of-trust problems inherent in container and VM build automation tools, and resigns to rolling their own, can basically look at these scripts and, without having to dig through unrelated complexity, see many exact same steps he would have taken, and either use it as a guide or as it is.
+ But loss of security does not have to be a cost of automation: gaining that security back begins, if not with using standard packaging and config or being able to compare 1:1 against it.
+
+  The idea of this tool isn't to solve any problems in any new, or even particularly interesting way. Rather in the most predictable way, such that sysadmins (who need to keep in mind endemic major chain-of-trust problems inherent in many container and VM build automation tools) resigned to rolling their own script bootstrap, can basically look at these scripts and, without having to dig through unrelated complexity, see many exact same steps he would have taken, and either use it as a guide or as it is.
 
 ##inject_seedfile:
 
@@ -33,6 +36,6 @@ Because I don't want to preclude composing an image out of multiple bash recipes
 1. (From outside the VM) ```./run_image.sh <disk image>:1 ./automation_shim/rm_shim:2```
 2. (From within the VM, as root) ```rm /etc/systemd/system/auto_shim.service /etc/systemd/system/multi-user.target.wants/auto_shim.service```
 
+## related tools
 
-  
-  
+There are some tools that do similar work. Simple-cdd is a nice tool, but focuses on debian alone, uses a non-default set of packages and configuration, and prioritize user interface over absolute simplicity.
