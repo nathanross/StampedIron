@@ -4,10 +4,10 @@ Stamped Iron is a short, readable, and fully-functional proof-of-concept of a se
 
 It demonstrates that bootstrapping a server image script:
 
- * **doesn't require trust in the security of a complex third party tool or its distro templates**
- * **makes use of an existing vanilla debian, ubuntu server, or RHEL iso.**
- * is simple enough to read and understand in entirety in half of a workday.
- * requires no familiarity with a specific scripting language beyond bash
+- **doesn't require trust in the security of a complex third party tool or its distro templates**
+- **makes use of an existing vanilla debian, ubuntu server, or RHEL iso.**
+- is simple enough to read and understand in entirety in half of a workday.
+- requires no familiarity with a specific scripting language beyond bash.
 
   There are many testability and security benefits to all your server instances starting on the same, trusted, foundation. When Debian and RHEL issue security updates, they issue them in response to vulnerabilities and conditions within the vanilla OS packaging and configuration.
 
