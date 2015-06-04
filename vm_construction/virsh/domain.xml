@@ -7,7 +7,7 @@
   </os>
   <clock sync="localtime"/>
   <devices>
-    <emulator>/usr/bin/qemu-kvm</emulator>
+    <emulator>/usr/bin/kvm</emulator>
     ${disks}
     <interface type='network'>
       <source network='default'/>

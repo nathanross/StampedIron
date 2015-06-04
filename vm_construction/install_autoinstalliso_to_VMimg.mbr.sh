@@ -16,14 +16,14 @@
 #
 DIR=$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )
 export IFS=''
-error() { echo -e $@; exit 1 }
+error() { echo -e $@; exit 1; }
 
 main() {
     local -r autoinstall_iso=$1 out_device=$2 size=${3:-"14.5G"}
 
     #usage
-    ([ ! -e $autoinstall_iso ] || \
-        [ ! $out_image ]) && \
+    ([ ! $autoinstall_iso ] || [ ! -e $autoinstall_iso ] || \
+        [ ! $out_device ]) && \
         error "\n
 install_autoinstall_iso.sh <autoinstall_iso> <out_device> (<new_disk_size>)\n
 \n
@@ -34,7 +34,7 @@ install_autoinstall_iso.sh <autoinstall_iso> <out_device> (<new_disk_size>)\n
 "
     
     [ ! -e $out_device ] && qemu-img create $out_device $size
-    ${DIR}/./run-image.sh ${out_device}:2 ${autoinstall_iso}:1
+    ${DIR}/./run_image.sh ${out_device}:2 ${autoinstall_iso}:1
 }
 
 main $@

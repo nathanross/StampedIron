@@ -15,8 +15,10 @@
 # limitations under the License.
 #
 
+DIR=$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )
 export IFS=''
-error() { echo -e $@; exit 1 }
+error() { echo -e $@; exit 1; }
+split(){ local -n ret=$1; IFS=$2; ret=($3); }
 usage() {
     error "\n
 run_image.sh <image>:prio (<folder or .img to add as sdb>:prio)\n
@@ -39,8 +41,8 @@ BOOT_PRIO= 'sdb' or 'sda' depending on whether primary or secondary disk should 
 }
 mkdtmp() {
     local -n l=$1;
-    if [ $WORKDIR ];
-       l="${WORKDIR}/`date +%s`"
+    if [ $WORKDIR ]; then
+       l="${WORKDIR}/`date +%s%N`"
        mkdir -p $l
     else
         l=`mktemp -d 2>/dev/null || mktemp -d -t 'mytmpdir'`
@@ -54,24 +56,33 @@ mkRoImage() {
     l_newdisk=$d_tmp/`date +%s%N`.raw
     qemu-img create $l_newdisk `echo "$dirsize + (50*1024*1024)" | bc`
     i=`expr $i + 1`
-    yes | mkfs.ext4 -L "stampedIronShim" 
+    yes | mkfs.ext4 -L "stampedIronShim"
+    mkdir -p $tmpdir/mnt
     mount $l_newdisk $tmpdir/mnt
     cp -rT $src_dir $tmpdir/mnt
     umount $l_newdisk
 }
 
 main() {
-    local -r name=${NAME:-vcon`date +%s`}, vcpu=${VCPU:-2} mem=${MEM:-219200}
+    local -r name=${NAME:-vcon`date +%s`} vcpu=${VCPU:-2} mem=${MEM:-219200}
     local disks='' bootprio='' l_disk=''    
+
+    int_re='^[0-9]+$'
     
     mkdtmp tmpdir
     i=0
-    for x in ${@[*]}
+    for x in $@
     do
-        arr_disk=(${x//:/ })
+        unset arr_disk
+        split arr_disk ':' "$x"
+        echo "arr:${arr_disk[*]}"
         l_disk=${arr_disk[0]}
         bootprio=${arr_disk[1]}
-        mkdir $tmpdir/mnt
+        echo "x:$x"
+        echo "ld:$l_disk"
+        echo "b:$bootprio"
+        [[ $bootprio =~ $int_re ]] || usage
+        
         [ ! -e $l_disk ] && \
             error "asked to use disk at $l_disk but no file/dir exists there"
         
@@ -81,17 +92,20 @@ main() {
       <driver name='qemu' type='raw'/>
       <source file='${l_disk}'/>
       <target dev='sda'/>
+      <address type='drive' bus='0' target='0' unit='$i' />
       <boot order='${bootprio}' />
     </disk>"
+        i=`expr $i + 1`
     done
     
     [ ! $disks ] && usage
-    xml=`envsubst '$name:$mem:$vcpu:$disks' < ${DIR}/virsh/domain.xml`
-    echo $xml | virsh create -
+    env -i name=$name mem=$mem vcpu=$vcpu disks=$disks \
+        envsubst < ${DIR}/virsh/domain.xml > $tmpdir/domain.xml
+    virsh create $tmpdir/domain.xml
     
     #virsh start $name
     #virsh remove $name
-    rm -rf $tmpdir
+    #rm -rf $tmpdir
     
 }
 

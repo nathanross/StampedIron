@@ -25,12 +25,12 @@ DIR=$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )
 export IFS=''
 export WORKDIR=${WORKDIR:-"/opt/build/tmp"}
 
-error() { echo -e $@; exit 1 }
+error() { echo -e $@; exit 1; }
 
 mkdtmp() {
     local -n l=$1;
-    if [ $WORKDIR ];
-       l="${WORKDIR}/`date +%s`"
+    if [ $WORKDIR ]; then
+       l="${WORKDIR}/`date +%s%N`"
        mkdir -p $l
     else
         l=`mktemp -d 2>/dev/null || mktemp -d -t 'mytmpdir'`
@@ -39,17 +39,17 @@ mkdtmp() {
 
 append_late_command() {
     local -n ret_string=$1
-    local -r shellscript=$2 seed_data=$3
+    local shellscript=$2 seed_data=$3
     
     #ensure each line ends with semicolon and then
     # replace newlines with spaces
     shellscript_cat=`echo "$shellscript" | sed -r 's/([^;])$/\1;/g' | tr '\n' ' '`
     
-    if [ `echo "$seed_data" | grep -E '^d-i preseed/late_command string ' | wc -l` -gt 0 ]
+    if [ `echo $seed_data | grep -E '^d-i preseed/late_command string ' | wc -l` -gt 0 ]
     then
-        ret_string=`echo -e "$seed_data" | sed -r "s@^(d-i preseed/late_command string) @\1 $shellscript_cat @"`
+        ret_string=`echo -e $seed_data | sed -r "s@^(d-i preseed/late_command string) @\1 $shellscript_cat @"`
     else
-        ret_string=`echo -e "$seed_data" "\nd-i preseed/late_command string $shellscript_cat"`
+        ret_string=`echo -e $seed_data "\nd-i preseed/late_command string $shellscript_cat"`
     fi
 }
 
@@ -74,7 +74,7 @@ mod_debian() {
     find . | cpio -H newc --create | \
         gzip -9 > ${d_newiso}/install.amd/initrd.gz
     cd ../
-    rm -f $d_initrd_fix    
+    rm -rf $d_initrd_fix    
 }
 
 main() {
@@ -82,8 +82,8 @@ main() {
     
     local dist=${DISTRO:-"debian"}
 
-    ([ ! -e ${src_iso} ] || \
-        [ ! -e ${seedfile} ] || \
+    ([ ! ${src_iso} ] || [ ! -e ${src_iso} ] || \
+        [ ! ${seedfile} ] || [ ! -e ${seedfile} ] || \
         ( [ $copydir ] && [ ! -e ${copydir} ] )) && \
         error " \n
  inject_seedfile.sh <src iso> <out iso> <seed file> (<file or dir to copy to cd root>)\n
@@ -95,7 +95,7 @@ main() {
 
     local d_mntiso='' d_newiso=''
     mkdtmp d_newiso
-    mkdtmp $d_mntiso
+    mkdtmp d_mntiso
     
     mkdir -p ${d_mntiso} ${d_newiso}
     [ $dist = "debian" ] && mkdir -p ${d_work}/irmod
@@ -145,10 +145,11 @@ main() {
     #this commented out line doesn't work: the reason: the binary and catalog paths must be relative for some silly reason.
     #mkisofs -input-charset utf-8 -D -r -V "ATTENDLESS_UBUNTU" -cache-inodes -J -l bi ${newiso}/isolinux/isolinux.bin -c ${newiso}/isolinux/boot.cat -no-emul-boot -boot-load-size 4 -boot-info-table -o ${workdir}/autoinstall.iso ${newiso}/
     #cd ${newiso}
-    genisoimage -input-charset utf-8 -D -r -V "ATTENDLESS_${dist}" -cache-inodes -J -l -b isolinux/isolinux.bin -c isolinux/boot.cat -no-emul-boot -boot-load-size 4 -boot-info-table -o ${d_work}/autoinstall.iso ${d_newiso}/
+    genisoimage -input-charset utf-8 -D -r -V "ATTENDLESS_${dist}" -cache-inodes -J -l -b isolinux/isolinux.bin -c isolinux/boot.cat -no-emul-boot -boot-load-size 4 -boot-info-table -o ${out_iso} ${d_newiso}/
 
     umount ${d_mntiso}
     rm -rf ${d_mntiso} ${d_newiso}
 }
 
 main $@
+
