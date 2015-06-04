@@ -1,6 +1,6 @@
-#Vm_construction
+#StampedIron
 
-The goal of StampedIron's VM Construction toolset is to make security conscious VM AND bare-metal-install Build Automation easy.:
+The goal of StampedIron is to make security conscious VM AND bare-metal-install Build Automation easy.:
 
  * A hands-off open-source autoinstall ISO creation, VM disk image creation, distro install and recipe bootstrapping pipeline
  * that doesn't require your trust in the security of a complex third party tool or its distro templates
@@ -30,12 +30,9 @@ If the ISO is created by inject_seedfile, an automation_shim is inserted into th
 
 Because I don't want to preclude composing an image out of multiple bash recipes, this automation_shim will not self-delete after first run. Instead, after you have no need of it, it is best to remove it. This can be done two ways:
 
-1. (From outside the VM) ./run_image.sh <disk image> ./automation_shim/rm_shim
+1. (From outside the VM) ```./run_image.sh <disk image>:1 ./automation_shim/rm_shim:2```
+2. (From within the VM, as root) ```rm /etc/systemd/system/auto_shim.service /etc/systemd/system/multi-user.target.wants/auto_shim.service```
 
-2. (From within the VM, as root) rm /etc/systemd/system/auto_shim.service /etc/systemd/system/multi-user.target.wants/auto_shim.service
 
-## Package caching
-
-  in the examples/squid directory is an image you can use to create a package cache. 
   
   
