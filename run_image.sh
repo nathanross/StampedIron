@@ -71,6 +71,7 @@ main() {
     
     mkdtmp tmpdir
     i=0
+    devicename=(a b c d e f g h i j)
     for x in $@
     do
         unset arr_disk
@@ -88,10 +89,17 @@ main() {
         
         [ -d $l_disk ] && mkRoImage l_disk $l_disk $tmpdir        
         bootprio=${arr_disk[1]}
-        disks="${disks}\n<disk type='file' device='disk'>
-      <driver name='qemu' type='raw'/>
+        device='disk'
+        driver="name='qemu' type='raw'"
+        if [[ ${l_disk} =~ \.iso$ ]]; then
+            device='cdrom'
+            driver="name='qemu' type='raw'"
+        fi
+        disks="${disks}
+    <disk type='file' device='$device'>
+      <driver $driver />
       <source file='${l_disk}'/>
-      <target dev='sda'/>
+      <target dev='sd${devicename[$i]}'/>
       <address type='drive' bus='0' target='0' unit='$i' />
       <boot order='${bootprio}' />
     </disk>"
@@ -101,12 +109,10 @@ main() {
     [ ! $disks ] && usage
     env -i name=$name mem=$mem vcpu=$vcpu disks=$disks \
         envsubst < ${DIR}/virsh/domain.xml > $tmpdir/domain.xml
+    cat $tmpdir/domain.xml
     virsh create $tmpdir/domain.xml
-    
-    #virsh start $name
-    #virsh remove $name
-    #rm -rf $tmpdir
-    
+    #virsh destroy $name
+    rm -rf $tmpdir    
 }
 
 main $@

@@ -1,6 +1,7 @@
 <domain type='kvm'>
   <name>${name}</name>
   <memory>${mem}</memory>
+  <currentMemory>${mem}</currentMemory>
   <vcpu>${vcpu}</vcpu>
   <os>
     <type arch='x86_64'>hvm</type>
@@ -12,6 +13,6 @@
     <interface type='network'>
       <source network='default'/>
     </interface>
-    <graphics type='vnc' port='5904' listen='0.0.0.0' />
+    <graphics type='sdl' display=':0.0' />
   </devices>
 </domain>

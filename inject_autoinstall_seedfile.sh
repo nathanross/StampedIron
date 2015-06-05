@@ -40,7 +40,6 @@ mkdtmp() {
 append_late_command() {
     local -n ret_string=$1
     local shellscript=$2 seed_data=$3
-    
     #ensure each line ends with semicolon and then
     # replace newlines with spaces
     shellscript_cat=`echo "$shellscript" | sed -r 's/([^;])$/\1;/g' | tr '\n' ' '`
@@ -70,7 +69,7 @@ mod_debian() {
     cd $d_initrd_fix
     gzip -d < ${d_newiso}/install.amd/initrd.gz | \
         cpio --extract --make-directories --no-absolute-filenames
-    echo ${seed_data} > ./preseed.cfg
+    echo ${seed_final} > ./preseed.cfg
     find . | cpio -H newc --create | \
         gzip -9 > ${d_newiso}/install.amd/initrd.gz
     cd ../
@@ -125,13 +124,16 @@ main() {
         # command is extant in the user's preseed, the shim
         # late command is appended to it.
 
-        local seed_data='';
-        append_late_command seed_data \
+        #can't name it seed_data because bash doesn't
+        #respect scoping in that context. the return value is valid
+        #at the end of the subfunc. call but 
+        #after the call finishes gets returned as none.
+        local seed_data_f
+        append_late_command seed_data_f \
                             `cat ${DIR}/automation_shim/late_command.seed` \
                             `cat $seedfile`
-        #echo "$seed_data"
-        [ $dist = "ubuntu" ] && mod_ubuntu $d_newiso $seed_data
-        [ $dist = "debian" ] && mod_debian $d_newiso $seed_data
+        [ $dist = "ubuntu" ] && mod_ubuntu $d_newiso $seed_data_f
+        [ $dist = "debian" ] && mod_debian $d_newiso $seed_data_f
     fi
     
     #D stands for disable deep directory relocation
