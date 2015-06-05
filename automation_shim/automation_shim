@@ -18,9 +18,9 @@
 #deal with virsh dns
 # virsh mangles with dns even in contexts it has
 # no intent of fwd'ing it. 
-echo -e "75.75.75.75\n75.75.76.76" > /etc/resolv.conf
-if [ -e /dev/sdb ]; then
-    mount /dev/sdb /mnt
+echo -e "nameserver 75.75.75.75\nnameserver 75.75.76.76" > /etc/resolv.conf
+if [ -e /dev/sdb1 ]; then
+    mount /dev/sdb1 /mnt
     if [ -e /mnt/run.sh ]; then
         chmod +x /mnt/run.sh 
         /mnt/./run.sh 2>&1 >> /var/log/automation_shim

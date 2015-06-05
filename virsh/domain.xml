@@ -7,6 +7,9 @@
     <type arch='x86_64'>hvm</type>
   </os>
   <clock sync="localtime"/>
+  <features>
+    <acpi />
+  </features>
   <devices>
     <emulator>/usr/bin/kvm</emulator>
     ${disks}

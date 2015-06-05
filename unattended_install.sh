@@ -25,7 +25,7 @@ main() {
     ([ ! $autoinstall_iso ] || [ ! -e $autoinstall_iso ] || \
         [ ! $out_device ]) && \
         error "\n
-install_autoinstall_iso.sh <autoinstall_iso> <out_device> (<new_disk_size>)\n
+unattended_install.sh <autoinstall_iso> <out_device> (<new_disk_size>)\n
 \n
     <out_device>: device or disk image to install to.\n
        if a non-existent path, creates raw .img of size <new_disk_size> \n

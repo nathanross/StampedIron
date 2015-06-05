@@ -14,7 +14,7 @@ echo -e "cache_dir aufs /var/spool/squid3 8000 16 256
 maximum_object_size 200 MB
 " >> /etc/squid3/squid.conf
 
-sed -ri "s/http_access deny all/http_access allow 192.168.0.0\/16\nhttp_access deny all/g" /etc/squid3/squid.conf
+sed -ri "s/http_access deny all/http_access allow localnet\/16\nhttp_access deny all/g" /etc/squid3/squid.conf
 sed -ri "s/^#acl localnet src 192.168/acl localnet src 192.168/g" /etc/squid3/squid.conf
 
 service squid3 stop

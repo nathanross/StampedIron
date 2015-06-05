@@ -97,8 +97,13 @@ main() {
         envsubst < ${DIR}/virsh/domain.xml > $tmpdir/domain.xml
     cat $tmpdir/domain.xml
     virsh create $tmpdir/domain.xml
-    #virsh destroy $name
-    rm -rf $tmpdir    
+    rm -rf $tmpdir
+    
+    sleep 4
+    while [ `virsh list --name --state-running | grep -E "^$name\$" | wc -l ` -gt 0 ];
+    do
+        sleep 1
+    done    
 }
 
 main $@
