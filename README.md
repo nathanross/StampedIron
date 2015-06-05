@@ -1,12 +1,13 @@
 #StampedIron
 
-Stamped Iron is a short, readable, and fully-functional proof-of-concept of a server imaging approach that addresses a security gap endemic to emerging server imaging technologies.
+Stamped Iron is a short, readable, and fully-functional proof-of-concept of a server imaging approach that addresses an imaging workflow gap.
 
 It demonstrates that bootstrapping a server image script:
 
 - **doesn't require trust in the security of a complex third party tool or its distro templates**  
-- **makes use of an existing vanilla debian, ubuntu server, or RHEL iso.**  
-- is simple enough to read and understand in entirety in half of a workday.  
+- **makes use of an existing vanilla debian, ubuntu server, or RHEL iso.**
+- doesn't abstract away the ISO intermediary step, so you can automate booted installation on bare metal.
+- is simple enough to read and understand in entirety in a few hours
 - requires no familiarity with a specific scripting language beyond bash.  
 
 There are many testability and security benefits to all your server instances starting on the same, trusted, foundation. When Debian and RHEL issue security updates, they issue them in response to vulnerabilities and conditions within the vanilla OS packaging and configuration.
@@ -38,4 +39,6 @@ Because I don't want to preclude composing an image out of multiple bash recipes
 
 ## related tools
 
-There are some tools that do similar work. Simple-cdd is a nice tool, but focuses on debian alone, uses a non-default set of packages and configuration, and prioritize user interface over absolute simplicity.
+There are some tools that do similar work.
+- virtinst has the same capabilities with some tooling, but has several hundred mb of additional dependencies (incl. x11) and abstracts away the ISO intermediary step. Which means getting an image on bare metal means opening up each and every computer to swap out the hard drive out or attach a cable to it from another computer while it does the install process.
+- Simple-cdd is a nice tool, but focuses on debian alone, uses a non-default set of packages and configuration, and prioritize user interface over absolute simplicity.
