@@ -40,5 +40,6 @@ Because I don't want to preclude composing an image out of multiple bash recipes
 ## related tools
 
 There are some tools that do similar work.
-- virtinst has the same capabilities with some tooling, but has several hundred mb of additional dependencies (incl. x11) and abstracts away the ISO intermediary step. Which means getting an image on bare metal means opening up each and every computer to swap out the hard drive out or attach a cable to it from another computer while it does the install process.
+
+- virtinst has different goals than this tool, and actually works complemantarily (it replaces the install.sh and run_image.sh fn.). The main function of this tool is to create an imaging install iso, so getting the same image on bare metal dosen't require opening up each and every computer to swap out the hard drive out or attach a cable to it from another computer while it does the install process. For VMs, though, virt-install can be used on the autoinstall iso, or to simply inject the seedfile and automation shim in this repo on top of the vanilla distro.
 - Simple-cdd is a nice tool, but focuses on debian alone, uses a non-default set of packages and configuration, and prioritize user interface over absolute simplicity.
