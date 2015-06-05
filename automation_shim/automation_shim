@@ -15,6 +15,10 @@
 # limitations under the License.
 #
 
+#deal with virsh dns
+# virsh mangles with dns even in contexts it has
+# no intent of fwd'ing it. 
+echo -e "75.75.75.75\n75.75.76.76" > /etc/resolv.conf
 if [ -e /dev/sdb ]; then
     mount /dev/sdb /mnt
     if [ -e /mnt/run.sh ]; then

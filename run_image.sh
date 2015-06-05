@@ -48,21 +48,6 @@ mkdtmp() {
         l=`mktemp -d 2>/dev/null || mktemp -d -t 'mytmpdir'`
     fi
 }
-
-mkRoImage() {
-    local -n l_newdisk=$1;
-    local -r d_src=$2 d_tmp=$3;
-    dirsize=`du -s --block-size=1 "$d_src" | cut -f1`
-    l_newdisk=$d_tmp/`date +%s%N`.raw
-    qemu-img create $l_newdisk `echo "$dirsize + (50*1024*1024)" | bc`
-    i=`expr $i + 1`
-    yes | mkfs.ext4 -L "stampedIronShim"
-    mkdir -p $tmpdir/mnt
-    mount $l_newdisk $tmpdir/mnt
-    cp -rT $src_dir $tmpdir/mnt
-    umount $l_newdisk
-}
-
 main() {
     local -r name=${NAME:-vcon`date +%s`} vcpu=${VCPU:-2} mem=${MEM:-219200}
     local disks='' bootprio='' l_disk=''    
@@ -77,28 +62,29 @@ main() {
         unset arr_disk
         split arr_disk ':' "$x"
         echo "arr:${arr_disk[*]}"
-        l_disk=${arr_disk[0]}
+        l_disk=`readlink -f ${arr_disk[0]}`
         bootprio=${arr_disk[1]}
-        echo "x:$x"
-        echo "ld:$l_disk"
-        echo "b:$bootprio"
         [[ $bootprio =~ $int_re ]] || usage
-        
         [ ! -e $l_disk ] && \
             error "asked to use disk at $l_disk but no file/dir exists there"
-        
-        [ -d $l_disk ] && mkRoImage l_disk $l_disk $tmpdir        
         bootprio=${arr_disk[1]}
-        device='disk'
-        driver="name='qemu' type='raw'"
         if [[ ${l_disk} =~ \.iso$ ]]; then
-            device='cdrom'
+            device="type='file' device='cdrom'"
             driver="name='qemu' type='raw'"
+            source="file='${l_disk}'"
+        elif [ -d $l_disk ]; then
+            device="type='dir' device='disk'><readonly/"
+            driver="name='qemu'"
+            source="dir='${l_disk}'"
+        else
+            device="type='file' device='disk'"
+            driver="name='qemu' type='raw'"
+            source="file='${l_disk}'"
         fi
         disks="${disks}
-    <disk type='file' device='$device'>
+    <disk $device>
       <driver $driver />
-      <source file='${l_disk}'/>
+      <source $source />
       <target dev='sd${devicename[$i]}'/>
       <address type='drive' bus='0' target='0' unit='$i' />
       <boot order='${bootprio}' />
