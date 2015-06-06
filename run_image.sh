@@ -79,6 +79,11 @@ main() {
         cp -rT $DIR/virsh/ip/static /tmp/si_static
         sed -ri "s/address .addr/address $IP_ADDRESS/g" \
             /tmp/si_static/interfaces
+        #stampedIron network default if not provided as env var.
+        sed -ri "s/netmask .netmask/netmask ${NETMASK:-255.255.255.0}/g" \
+            /tmp/si_static/interfaces
+        sed -ri "s/gateway .gateway/gateway ${GATEWAY:-192.168.124.1}/g" \
+            /tmp/si_static/interfaces
         ip_disk="/tmp/si_static:100"
     fi
     insert disk_set 1 $ip_disk $@
