@@ -34,7 +34,12 @@ unattended_install.sh <autoinstall_iso> <out_device> (<new_disk_size>)\n
 "
     
     [ ! -e $out_device ] && qemu-img create $out_device $size
-    ${DIR}/./run_image.sh ${out_device}:2 ${autoinstall_iso}:1
+    kvm -hda ${out_device} -cdrom ${autoinstall_iso} -smp 2 -m 512 -boot d
+    # multipartition installs over virsh scsi controllers
+    # have had initrd problems on startup that vanilla qemu has not.
+    # until we test out a good device setup for virsh install xml,
+    # just using qemu-specific cmd
+    #${DIR}/./run_image.sh ${out_device}:2 ${autoinstall_iso}:1
 }
 
 main $@

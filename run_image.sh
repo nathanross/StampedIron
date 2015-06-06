@@ -50,7 +50,7 @@ mkdtmp() {
 }
 insert() {
     local -n newarr=$1
-    local oldarr=$2 pos=$3 newval=$4
+    local pos=$2 newval=$3 oldarr=("${@:4}")
     newarr=()
     i=0
     for x in ${oldarr[*]};
@@ -73,7 +73,7 @@ main() {
     mkdtmp tmpdir
     i=0
     devicename=(a b c d e f g h i j)
-    ip_disk="$DIR/virsh/ip/dhcp:100"
+    ip_disk="${DIR}/virsh/ip/dhcp:100"
     if [ $IP_ADDRESS ];
     then
         cp -rT $DIR/virsh/ip/static /tmp/si_static
@@ -81,7 +81,8 @@ main() {
             /tmp/si_static/interfaces
         ip_disk="/tmp/si_static:100"
     fi
-    insert disk_set $@ 1 $ip_disk
+    insert disk_set 1 $ip_disk $@
+    i=0
     for x in ${disk_set[*]}
     do
         unset arr_disk
@@ -120,6 +121,8 @@ main() {
     env -i name=$name mem=$mem vcpu=$vcpu disks=$disks \
         envsubst < ${DIR}/virsh/domain.xml > $tmpdir/domain.xml
     cat $tmpdir/domain.xml
+
+    start_time=`date +%s`
     virsh create $tmpdir/domain.xml
     
     sleep 4
@@ -127,6 +130,10 @@ main() {
     do
         sleep 1
     done
+    end_time=`date +%s`
+    echo "start: $start_time"
+    echo "end: $end_time"
+    echo "wait: `expr $end_time - $start_time`"
     rm -rf $tmpdir
 }
 

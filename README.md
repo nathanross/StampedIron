@@ -54,7 +54,8 @@ virsh net-create virsh/network.xml
 wget <debian iso>
 ./inject_autoinstall_seedfile.sh <debian iso> /tmp/auto_shim.iso examples/seedfiles/debian.ext4.seed
 ./unattended_install.sh /tmp/auto_shim.iso /root/auto_shim.disk 15G
-./run_image /tmp/auto_shim.disk:1 examples/recipes/squid:2
+SQUID_IP=192.168.124.10
+IP_ADDRESS=$SQUID_IP ./run_image /tmp/auto_shim.disk:1 examples/recipes/squid:2
 echo 'http_proxy=$SQUID_IP:3128' >> ~/.wgetrc
 wget http://<file>
 wget http://<file>

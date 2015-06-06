@@ -161,7 +161,7 @@ d-i partman-auto/expert_recipe string \
 #d-i     partman-auto/choose_recipe      select boot-gpt
 
 d-i preseed/late_command string \
-    in-target btrfs device add /dev/sda2 /; \
+    in-target btrfs device add -f /dev/sda2 /; \
     in-target btrfs balance start -dconvert=raid1 -mconvert=raid1 /;
 
 
