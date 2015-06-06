@@ -55,11 +55,13 @@ insert() {
     i=0
     for x in ${oldarr[*]};
     do
-        [ $i -eq 0 ] && newarr+=($newval)
+        echo '###'
+        echo $x
+        [ $i -eq $pos ] && newarr+=($newval)
         newarr+=($x)
         i=`expr $i + 1`
     done
-    [ $i -eq 0 ] && newarr+=($newval)
+    [ $i -eq $pos ] && newarr+=($newval)
     
 }
 main() {
@@ -74,13 +76,13 @@ main() {
     ip_disk="$DIR/virsh/ip/dhcp:100"
     if [ $IP_ADDRESS ];
     then
-        cp -r $DIR/virsh/ip/static $tmpdir/static
-        sed -ri "s/address .addr/address $IP_ADDRESS/" \
-            $tmpdir/static/interfaces
-        ip_disk="$tmpdir/static:100"
+        cp -rT $DIR/virsh/ip/static /tmp/si_static
+        sed -ri "s/address .addr/address $IP_ADDRESS/g" \
+            /tmp/si_static/interfaces
+        ip_disk="/tmp/si_static:100"
     fi
     insert disk_set $@ 1 $ip_disk
-    for x in $disk_set
+    for x in ${disk_set[*]}
     do
         unset arr_disk
         split arr_disk ':' "$x"
@@ -119,13 +121,13 @@ main() {
         envsubst < ${DIR}/virsh/domain.xml > $tmpdir/domain.xml
     cat $tmpdir/domain.xml
     virsh create $tmpdir/domain.xml
-    rm -rf $tmpdir
     
     sleep 4
     while [ `virsh list --name --state-running | grep -E "^$name\$" | wc -l ` -gt 0 ];
     do
         sleep 1
-    done    
+    done
+    rm -rf $tmpdir
 }
 
 main $@

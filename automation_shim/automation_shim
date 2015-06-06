@@ -24,7 +24,7 @@ if [ -e /dev/sdb1 ]; then
     if [ -e /mnt/run.sh ]; then
         chmod +x /mnt/run.sh 
         /mnt/./run.sh 2>&1 >> /var/log/automation_shim
-        shutdown now
-    fi        
+    fi
+    umount /mnt
 fi
 exit 0
