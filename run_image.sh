@@ -74,6 +74,8 @@ main() {
     i=0
     devicename=(a b c d e f g h i j)
     ip_disk="${DIR}/virsh/ip/dhcp:100"
+    #todo pass permissions for real tmpdir
+    # so need to use named tmpdirs
     if [ $IP_ADDRESS ];
     then
         cp -rT $DIR/virsh/ip/static /tmp/si_static
@@ -88,6 +90,10 @@ main() {
     fi
     insert disk_set 1 $ip_disk $@
     i=0
+    rm -rf /tmp/si_env
+    mkdir -p /tmp/si_env
+    envdir=/tmp/si_env
+    
     for x in ${disk_set[*]}
     do
         unset arr_disk
@@ -95,6 +101,7 @@ main() {
         echo "arr:${arr_disk[*]}"
         l_disk=`readlink -f ${arr_disk[0]}`
         bootprio=${arr_disk[1]}
+        envadd=${arr_disk[2]}
         [[ $bootprio =~ $int_re ]] || usage
         [ ! -e $l_disk ] && \
             error "asked to use disk at $l_disk but no file/dir exists there"
@@ -121,9 +128,17 @@ main() {
       <boot order='${bootprio}' />
     </disk>"
         i=`expr $i + 1`
+        if [ $envadd ]; then
+            split env_args ';' "$envadd"
+            envfile="$envdir/sd${devicename[$i]}"
+            for arg in env_args; do
+                echo "export " $envadd >> $envfile
+            done
+            chmod +x $envfile
+        fi
     done
     [ ! $disks ] && usage
-    env -i name=$name mem=$mem vcpu=$vcpu disks=$disks \
+    env -i name=$name mem=$mem vcpu=$vcpu disks=$disks envdir=$envdir \
         envsubst < ${DIR}/virsh/domain.xml > $tmpdir/domain.xml
     cat $tmpdir/domain.xml
 

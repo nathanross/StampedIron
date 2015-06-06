@@ -19,12 +19,22 @@
 # virsh mangles with dns even in contexts it has
 # no intent of fwd'ing it. 
 echo -e "nameserver 75.75.75.75\nnameserver 75.75.76.76" > /etc/resolv.conf
-if [ -e /dev/sdb1 ]; then
-    mount /dev/sdb1 /mnt
-    if [ -e /mnt/run.sh ]; then
-        chmod +x /mnt/run.sh 
-        /mnt/./run.sh 2>&1 >> /var/log/automation_shim
+
+for i in (b c d e f g h i j)
+do
+    $taskname="sd${i}"
+    if [ -e /dev/${taskname}1 ]; then        
+        mount /dev/${taskname}1 /mnt
+        if [ -e /mnt/run.sh ]; then
+            chmod +x /mnt/run.sh
+            envfile=/opt/envs/${taskname}
+            if [ -e $envfile ]; then
+                (. /./${envfile} /mnt/./run.sh 2>&1 >> /var/log/automation_shim)
+            else
+                /mnt/./run.sh 2>&1 >> /var/log/automation_shim
+            fi
+        fi
+        umount /mnt
     fi
-    umount /mnt
-fi
+done
 exit 0
