@@ -48,6 +48,20 @@ mkdtmp() {
         l=`mktemp -d 2>/dev/null || mktemp -d -t 'mytmpdir'`
     fi
 }
+insert() {
+    local -n newarr=$1
+    local oldarr=$2 pos=$3 newval=$4
+    newarr=()
+    i=0
+    for x in ${oldarr[*]};
+    do
+        [ $i -eq 0 ] && newarr+=($newval)
+        newarr+=($x)
+        i=`expr $i + 1`
+    done
+    [ $i -eq 0 ] && newarr+=($newval)
+    
+}
 main() {
     local -r name=${NAME:-vcon`date +%s`} vcpu=${VCPU:-2} mem=${MEM:-219200}
     local disks='' bootprio='' l_disk=''    
@@ -57,7 +71,16 @@ main() {
     mkdtmp tmpdir
     i=0
     devicename=(a b c d e f g h i j)
-    for x in $@
+    ip_disk="$DIR/virsh/ip/dhcp:100"
+    if [ $IP_ADDRESS ];
+    then
+        cp -r $DIR/virsh/ip/static $tmpdir/static
+        sed -ri "s/address .addr/address $IP_ADDRESS/" \
+            $tmpdir/static/interfaces
+        ip_disk="$tmpdir/static:100"
+    fi
+    insert disk_set $@ 1 $ip_disk
+    for x in $disk_set
     do
         unset arr_disk
         split arr_disk ':' "$x"
@@ -91,7 +114,6 @@ main() {
     </disk>"
         i=`expr $i + 1`
     done
-    
     [ ! $disks ] && usage
     env -i name=$name mem=$mem vcpu=$vcpu disks=$disks \
         envsubst < ${DIR}/virsh/domain.xml > $tmpdir/domain.xml

@@ -1,5 +1,5 @@
 <network>
-  <name>default</name>
+  <name>stampedIron</name>
   <forward mode='nat'>
     <nat>
       <port start='68' end='65535'/>
@@ -8,7 +8,7 @@
   <bridge name='virbr1' stp='on' delay='0'/>
   <ip address='192.168.124.1' netmask='255.255.255.0'>
     <dhcp>
-      <range start='192.168.124.2' end='192.168.124.254'/>
+      <range start='192.168.124.11' end='192.168.124.254'/>
     </dhcp>
   </ip>
 </network>

@@ -1,0 +1,12 @@
+
+source /etc/network/interfaces.d/*
+auto lo
+iface lo inet loopback
+allow-hotplug eth0
+iface eth0 inet static
+      address $addr
+      netmask 255.255.255.0
+      
+# more netmask sophistication regard
+# to sensing it via virt-network possible later
+# probably more complication than we want in this repo though.

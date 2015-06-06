@@ -14,7 +14,7 @@
     <emulator>/usr/bin/kvm</emulator>
     ${disks}
     <interface type='network'>
-      <source network='default'/>
+      <source network='stampedIron'/>
     </interface>
     <graphics type='sdl' display=':0.0' />
   </devices>
