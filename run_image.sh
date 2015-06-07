@@ -78,8 +78,9 @@ main() {
     rm -rf /tmp/si_env
     mkdir -p /tmp/si_env
     envdir=/tmp/si_env
-    
-    for x in $@
+    insert disk_args 1 "$envdir:200" "$@"
+    i=0
+    for x in ${disk_args[*]}
     do
         unset arr_disk
         split arr_disk ':' "$x"
@@ -112,7 +113,6 @@ main() {
       <address type='drive' bus='0' target='0' unit='$i' />
       <boot order='${bootprio}' />
     </disk>"
-        i=`expr $i + 1`
         if [ $envadd ]; then
             split env_args ';' "$envadd"
             envfile="$envdir/sd${devicename[$i]}"
@@ -121,9 +121,10 @@ main() {
             done
             chmod +x $envfile
         fi
+        i=`expr $i + 1`
     done
     [ ! $disks ] && usage
-    env -i name=$name mem=$mem vcpu=$vcpu disks=$disks envdir=$envdir \
+    env -i name=$name mem=$mem vcpu=$vcpu disks=$disks \
         envsubst < ${DIR}/virsh/domain.xml > $tmpdir/domain.xml
     cat $tmpdir/domain.xml
 

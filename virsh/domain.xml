@@ -13,11 +13,6 @@
   <devices>
     <emulator>/usr/bin/kvm</emulator>
     ${disks}
-
-    <filesystem type='mount' accessmode='passthrough'>
-      <source dir='${envdir}'/>
-      <target dir='/opt/envs'/>
-    </filesystem>
     <interface type='network'>
       <source network='stampedIron'/>
     </interface>
