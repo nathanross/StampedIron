@@ -71,30 +71,15 @@ main() {
     int_re='^[0-9]+$'
     
     mkdtmp tmpdir
-    i=0
     devicename=(a b c d e f g h i j)
-    ip_disk="${DIR}/virsh/ip/dhcp:100"
     #todo pass permissions for real tmpdir
     # so need to use named tmpdirs
-    if [ $IP_ADDRESS ];
-    then
-        cp -rT $DIR/virsh/ip/static /tmp/si_static
-        sed -ri "s/address .addr/address $IP_ADDRESS/g" \
-            /tmp/si_static/interfaces
-        #stampedIron network default if not provided as env var.
-        sed -ri "s/netmask .netmask/netmask ${NETMASK:-255.255.255.0}/g" \
-            /tmp/si_static/interfaces
-        sed -ri "s/gateway .gateway/gateway ${GATEWAY:-192.168.124.1}/g" \
-            /tmp/si_static/interfaces
-        ip_disk="/tmp/si_static:100"
-    fi
-    insert disk_set 1 $ip_disk $@
     i=0
     rm -rf /tmp/si_env
     mkdir -p /tmp/si_env
     envdir=/tmp/si_env
     
-    for x in ${disk_set[*]}
+    for x in $@
     do
         unset arr_disk
         split arr_disk ':' "$x"

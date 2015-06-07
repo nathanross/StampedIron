@@ -20,9 +20,9 @@
 # no intent of fwd'ing it. 
 echo -e "nameserver 75.75.75.75\nnameserver 75.75.76.76" > /etc/resolv.conf
 
-for i in (b c d e f g h i j)
+for i in b c d e f g h i j
 do
-    $taskname="sd${i}"
+    taskname="sd${i}"
     if [ -e /dev/${taskname}1 ]; then        
         mount /dev/${taskname}1 /mnt
         if [ -e /mnt/run.sh ]; then
