@@ -35,7 +35,9 @@ environment vars:
 NAME = name to give to instance
 VCPU= num of vcpus. 2 is default
 MEM= amount of mem to use in KB. 219200 is default
-BOOT_PRIO= 'sdb' or 'sda' depending on whether primary or secondary disk should have boot prio
+VERBOSE= 1:print generated domain file. 0 is default.
+BLOCKING= 1:block until VM halts then print runtime. 0 is default.
+
 
 "
 }
@@ -55,8 +57,6 @@ insert() {
     i=0
     for x in ${oldarr[*]};
     do
-        echo '###'
-        echo $x
         [ $i -eq $pos ] && newarr+=($newval)
         newarr+=($x)
         i=`expr $i + 1`
@@ -84,7 +84,6 @@ main() {
     do
         unset arr_disk
         split arr_disk ':' "$x"
-        echo "arr:${arr_disk[*]}"
         l_disk=`readlink -f ${arr_disk[0]}`
         bootprio=${arr_disk[1]}
         envadd=${arr_disk[2]}
@@ -126,21 +125,41 @@ main() {
     [ ! $disks ] && usage
     env -i name=$name mem=$mem vcpu=$vcpu disks=$disks \
         envsubst < ${DIR}/virsh/domain.xml > $tmpdir/domain.xml
-    cat $tmpdir/domain.xml
+    [ $VERBOSE ] && [ $VERBOSE -eq 1 ] && cat $tmpdir/domain.xml
 
     start_time=`date +%s`
-    virsh create $tmpdir/domain.xml
-    
+    virsh create $tmpdir/domain.xml >/dev/null 2>/dev/null
     sleep 4
+    mac=`virsh domiflist $name | grep -i network | awk -v x=5 '{print $x}'`
+
+    ip_printed=0
     while [ `virsh list --name --state-running | grep -E "^$name\$" | wc -l ` -gt 0 ];
     do
+        end_time=`date +%s`
+        diff=`expr $end_time - $start_time`
+        if [ $ip_printed -eq 0 ]; then
+            ip=`virsh net-dhcp-leases stampedIron | grep -i "$mac" | awk -v x=5 '{print $x }' | cut -d'/' -f1`
+            if [ $ip ]; then        
+                echo "ip,$ip"
+                ip_printed=1
+            fi
+            if ([ ! $BLOCKING ] || [ $BLOCKING -eq 0 ]) &&
+               ([ $ip_printed -eq 1 ] || [ $diff -gt 60 ]); then
+                rm -rf $tmpdir
+                exit 0
+            fi
+        fi
         sleep 1
     done
-    end_time=`date +%s`
-    echo "start: $start_time"
-    echo "end: $end_time"
-    echo "wait: `expr $end_time - $start_time`"
+    # in case machine exits in < 30 seconds
+    if [ $BLOCKING ] && [ $BLOCKING -eq 1 ]; then
+        end_time=`date +%s`
+        echo "start,$start_time"
+        echo "end,$end_time"
+        echo "wait,`expr $end_time - $start_time`"
+    fi
     rm -rf $tmpdir
+    exit 0
 }
 
 main $@
