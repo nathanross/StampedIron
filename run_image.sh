@@ -130,6 +130,12 @@ main() {
     start_time=`date +%s`
     virsh create $tmpdir/domain.xml >/dev/null 2>/dev/null
     sleep 4
+
+    if ! (([ $BLOCKING ] && [ $BLOCKING -eq 1 ]) ||
+              ([ $WAIT_FOR_IP ] && [ $WAIT_FOR_IP -eq 1 ])); then
+        exit 0
+    fi
+       
     mac=`virsh domiflist $name | grep -i network | awk -v x=5 '{print $x}'`
 
     ip_printed=0
