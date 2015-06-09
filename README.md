@@ -60,6 +60,10 @@ WAIT_FOR_IP=1 SQUID_IP=`./run_image /tmp/squid.disk:1 examples/ip/static example
 env -i proxy=$SQUID_IP \
    envsubst < examples/seedfiles/debian.btrfs_raid1.mirrored.seed > /tmp/preseed
 ./inject_autoinstall_seedfile.sh <debian iso> /tmp/from_proxy.iso /tmp/preseed
+
+# this is an example case of BTRFS, which does not allow you to simply change the UUID through tuning.
+# the use of squid here is largely as a demonstration, a more general solution to the UUID uniqueness
+# problem, for those interested, is partman configs, search and replace uuid over fs, and then regen initrd.
 ./unattended_install.sh /tmp/from_proxy.iso /tmp/disk1.disk
 ./unattended_install.sh /tmp/from_proxy.iso /tmp/disk2.disk
 
