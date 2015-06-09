@@ -40,7 +40,7 @@ d-i mirror/country string us
 d-i mirror/http/hostname string ftp.us.debian.org
 d-i mirror/http/directory string /debian
 #d-i mirror/suite string testing
-d-i mirror/http/proxy string http://$proxy
+d-i mirror/http/proxy string http://$PROXY
 #d-i apt-setup/use_mirror boolean false
 d-i apt-setup/use_mirror boolean true
 
@@ -76,7 +76,7 @@ d-i partman-basicfilesystems/no_swap boolean false
 # but 'none' is always an option.
 # you can see the packages entailed in standard via
 # 'aptitude search ~pstandard ~prequired ~pimportant -F%p'
-tasksel tasksel/first multiselect none
+tasksel tasksel/first multiselect standard
 #d-i pkgsel/include string virt-what
 #set to none if no network.
 d-i pkgsel/upgrade select safe-upgrade

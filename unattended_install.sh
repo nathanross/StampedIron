@@ -35,7 +35,7 @@ unattended_install.sh <autoinstall_iso> <out_device> (<new_disk_size>)\n
     
     [ ! -e $out_device ] && qemu-img create $out_device $size
     start_time=`date +%s`
-    kvm -hda ${out_device} -cdrom ${autoinstall_iso} -smp 2 -m 512 -boot d
+    nice -n-10 kvm -hda ${out_device} -cdrom ${autoinstall_iso} -smp 2 -m 512 -boot d
     end_time=`date +%s`
     echo "start,$start_time"
     echo "end,$end_time"

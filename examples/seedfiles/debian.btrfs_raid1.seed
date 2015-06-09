@@ -42,6 +42,8 @@ d-i mirror/http/mirror select us.archive.ubuntu.com
 #d-i mirror/suite string testing
 #d-i mirror/http/proxy string
 #d-i apt-setup/use_mirror boolean true
+
+#no need to use mirror if we're just installing std task.
 d-i apt-setup/use_mirror boolean false
 
 
@@ -71,7 +73,7 @@ d-i partman-basicfilesystems/no_swap boolean false
 
 
 # -- opt. packages or package groups -------------
-d-i tasksel/first multiselect none
+tasksel tasksel/first multiselect standard
 #d-i pkgsel/include string virt-what
 #set to none if no network.
 d-i pkgsel/upgrade select none

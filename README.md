@@ -57,8 +57,8 @@ wget <debian iso>
 cp /tmp/auto_shim.disk /tmp/squid.disk
 WAIT_FOR_IP=1 SQUID_IP=`./run_image /tmp/squid.disk:1 examples/ip/static examples/recipes/squid:2 | cut -d',' -f2`
 # with full upgrade, having a proxy will typically reduce unattended install time by 30-40%
-env -i proxy=$SQUID_IP \
-   envsubst < examples/seedfiles/debian.btrfs_raid1.mirrored.seed > /tmp/preseed
+(env -i PROXY=$SQUID_IP \
+   envsubst '$PROXY' < examples/seedfiles/debian.btrfs_raid1.mirrored.seed) > /tmp/preseed
 ./inject_autoinstall_seedfile.sh <debian iso> /tmp/from_proxy.iso /tmp/preseed
 
 # this is an example case of BTRFS, which does not allow you to simply change the UUID through tuning.
