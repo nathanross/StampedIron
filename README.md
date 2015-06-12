@@ -55,7 +55,7 @@ wget <debian iso>
 ./inject_autoinstall_seedfile.sh <debian iso> /tmp/auto_shim.iso examples/seedfiles/debian.ext4.seed
 ./unattended_install.sh /tmp/auto_shim.iso /tmp/auto_shim.disk 15G
 cp /tmp/auto_shim.disk /tmp/squid.disk
-WAIT_FOR_IP=1 SQUID_IP=`./run_image /tmp/squid.disk:1 examples/ip/static examples/recipes/squid:2 | cut -d',' -f2`
+WAIT_FOR_IP=1 SQUID_IP=`./run_image /tmp/squid.disk::1 examples/recipes/squid::2 | cut -d',' -f2`
 # with full upgrade, having a proxy will typically reduce unattended install time by 30-40%
 (env -i PROXY=$SQUID_IP \
    envsubst '$PROXY' < examples/seedfiles/debian.btrfs_raid1.mirrored.seed) > /tmp/preseed
