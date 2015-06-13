@@ -141,6 +141,7 @@ d-i partman-auto/expert_recipe string \
                 filesystem{ btrfs } \
                 mountpoint{ / } \
                 options/ssd{ ssd } \
+                options/subvol{ @ } \
                 options/noatime{ noatime } . \
               7200 50 7201 btrfs \
                 $primary{ } \
@@ -169,7 +170,8 @@ d-i partman-auto/expert_recipe string \
 
 d-i preseed/late_command string \
     in-target btrfs device add -f /dev/sda2 /; \
-    in-target btrfs balance start -dconvert=raid1 -mconvert=raid1 /;
+    in-target btrfs balance start -dconvert=raid1 -mconvert=raid1 /; \
+    in-target sed -ri 's/^ *deb cdrom/#deb cdrom/g' /etc/apt/sources.list ;
 
 
 #MBR install - the below lines should be uncommented if you want an MBR
