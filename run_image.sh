@@ -58,7 +58,7 @@ hypervisor leveraging tool / VMM like Qemu, Virtualbox, VMWare, etc.\n
 environment vars:
 NAME = name to give to instance
 VCPU= num of vcpus. 2 is default
-MEM= amount of mem to use in MB. 256 is default
+MEM= amount of mem to use in MB. 512 is default
 VERBOSE= 1:print generated domain file. 0 is default.
 BLOCKING= 1:block until VM halts then print runtime. 0 is default.
 
@@ -89,7 +89,7 @@ insert() {
     
 }
 main() {
-    local -r name=${NAME:-vcon`date +%s`} vcpu=${VCPU:-2} memMB=${MEM:-256}
+    local -r name=${NAME:-vcon`date +%s`} vcpu=${VCPU:-2} memMB=${MEM:-512}
     local disks='' bootprio='' l_disk=''    
 
     int_re='^[0-9]+$'
