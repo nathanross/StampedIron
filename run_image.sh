@@ -146,7 +146,7 @@ main() {
         i=`expr $i + 1`
     done
     [ ! $disks ] && usage
-    env -i name=$name mem=`echo $memMB \* 1024` vcpu=$vcpu disks=$disks \
+    env -i name=$name mem=`expr $memMB \* 1024` vcpu=$vcpu disks=$disks \
         envsubst < ${DIR}/virsh/domain.xml > $tmpdir/domain.xml
     [ $VERBOSE ] && [ $VERBOSE -eq 1 ] && cat $tmpdir/domain.xml
 
