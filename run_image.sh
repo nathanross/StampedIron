@@ -151,7 +151,8 @@ main() {
     [ $VERBOSE ] && [ $VERBOSE -eq 1 ] && cat $tmpdir/domain.xml
 
     start_time=`date +%s`
-    virsh create $tmpdir/domain.xml >>/var/log/virsh_run_image 2>>/var/log/virsh_run_image.err
+    cat $tmpdir/domain.xml
+    virsh create $tmpdir/domain.xml 
     sleep 4
 
     if ! (([ $BLOCKING ] && [ $BLOCKING -eq 1 ]) ||
