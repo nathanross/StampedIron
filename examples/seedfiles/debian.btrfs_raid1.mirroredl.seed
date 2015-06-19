@@ -165,8 +165,11 @@ d-i partman-auto/expert_recipe string \
                 options/noatime{ noatime } . \
             100 5 -1 ext4 \
                 $primary{ }  \
-                method{ } \
+                $bootable{ } \
+                method{ format } format{ } \
+                use_filesystem{ } \
                 filesystem{ ext4 } \
+                mountpoint{ /boot } \
                 options/noatime{ noatime } .
 
 #GPT install - the below lines should be uncommented if you want a GPT
