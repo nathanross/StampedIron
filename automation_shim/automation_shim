@@ -32,9 +32,9 @@ do
             chmod +x /mnt/run.sh
             envfile=/opt/envs/${taskname}
             if [ -e $envfile ]; then
-                (. /./${envfile} ; /mnt/./run.sh 2>&1 >> /var/log/automation_shim)
+                (. /./${envfile} ; /mnt/./run.sh >>/var/log/automation_shim 2>&1 )
             else
-                /mnt/./run.sh 2>&1 >> /var/log/automation_shim
+                /mnt/./run.sh >>/var/log/automation_shim 2>&1
             fi
         fi
         umount /mnt
