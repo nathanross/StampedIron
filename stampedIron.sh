@@ -77,20 +77,21 @@ main() {
     if [ ! -e $outdir/$fname_iso ] ||
            ( [ $recreate_iso -eq 1 ] ); then
         #todo no env var, just check if preseed is more recently modified.
-        (env -i PROXY=192.168.124.8:3128 envsubst '$PROXY'< $stampedIron/examples/seedfiles/debian.btrfs_raid1.mirroredl.seed) > /tmp/preseed
-        WORKDIR=$scratch $d_tools/./inject_autoinstall_seedfile.sh $src $outdir/$fname_iso /tmp/preseed || exit 1
+        mkdtmp d_preseed
+        (envsubst < $seedfile) > $d_preseed/preseed
+        dbg $d_tools/./inject_autoinstall_seedfile.sh $src $outdir/$fname_iso $d_preseed/preseed || exit 1
         force_reinstall=1
     fi
 
     if [ ! -e $outdir/$disk.bak ] || [ $force_reinstall -eq 1 ]; then
-        WORKDIR=$scratch $d_tools/./unattended_install.sh $outdir/$fname_iso $outdir/$fname_disk || exit 1
-        cp $outdir/$disk $outdir/$fname_disk.bak || exit 1
+        dbg $d_tools/./unattended_install.sh $outdir/$fname_iso $outdir/$fname_disk || exit 1
+        cp $outdir/$fname_disk $outdir/$fname_disk.bak || exit 1
     else
         [ $debug -eq 0 ] && \
             cp $outdir/$fname_disk.bak $outdir/$fname_disk || exit 1
     fi
 
-    $RUN_VARS $d_tools/./run_image.sh $outdir/$fname_disk::1 \
+    dbg $RUN_VARS $d_tools/./run_image.sh $outdir/$fname_disk::1 \
               $recipes
 }
 main $@

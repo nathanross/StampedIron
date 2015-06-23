@@ -31,3 +31,8 @@ usage() {
     [ "$1" ] && echo "error: $@";
     error $USAGE_MSG
 }
+
+dbg() {
+    [ "$VERBOSE" ] && [ $VERBOSE -eq 1 ] && echo "$@"
+    $@
+}
