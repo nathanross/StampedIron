@@ -18,6 +18,10 @@ But loss of security does not have to be a cost of automation: gaining that secu
 
 The idea of this tool isn't to solve any problems in any new, or even particularly interesting way. Rather in the most predictable way, such that sysadmins (who need to keep in mind endemic major chain-of-trust problems inherent in many container and VM build automation tools) resigned to rolling their own script bootstrap, can basically look at these scripts and, without having to dig through unrelated complexity, see many exact same steps he would have taken, and either use it as a guide or as it is.
 
+##pipeline.sh :
+
+a convenience script for creating vm instances. Runs the below scripts in series using the provided input sources (seedfiles, recipe dirs), caching the results of the first (autoinstall iso) and second (installed disk image) for easy testing of recipe chanegs.
+
 ##inject_seedfile:
 
 injecting a debian seedfile (and optionally, a directory) into a debian-based iso and rebuilding into an iso.
@@ -50,21 +54,31 @@ There are some tools that do similar work.
 
 ```
 apt-get -y install virsh qemu-kvm
+wget http://cdimage.debian.org/debian-cd/8.1.0/amd64/iso-cd/debian-8.1.0-amd64-netinst.iso -P /tmp
 virsh net-create virsh/network.xml
-wget <debian iso>
-./inject_autoinstall_seedfile.sh <debian iso> /tmp/auto_shim.iso examples/seedfiles/debian.ext4.seed
-./unattended_install.sh /tmp/auto_shim.iso /tmp/auto_shim.disk 15G
-cp /tmp/auto_shim.disk /tmp/squid.disk
-WAIT_FOR_IP=1 SQUID_IP=`./run_image /tmp/squid.disk::1 examples/recipes/squid::2 | cut -d',' -f2`
-# with full upgrade, having a proxy will typically reduce unattended install time by 30-40%
-(env -i PROXY=$SQUID_IP \
-   envsubst '$PROXY' < examples/seedfiles/debian.btrfs_raid1.mirrored.seed) > /tmp/preseed
-./inject_autoinstall_seedfile.sh <debian iso> /tmp/from_proxy.iso /tmp/preseed
+export PROXY=( source examples/squid_image.sh ; ./pipeline.sh )
+echo $PROXY:3128
 
-# this is an example case of BTRFS, which does not allow you to simply change the UUID through tuning.
-# the use of squid here is largely as a demonstration, a more general solution to the UUID uniqueness
-# problem, for those interested, is partman configs, search and replace uuid over fs, and then regen initrd.
-./unattended_install.sh /tmp/from_proxy.iso /tmp/disk1.disk
-./unattended_install.sh /tmp/from_proxy.iso /tmp/disk2.disk
+# with full upgrade, having a proxy will typically reduce unattended install time by 30-40%
+```
+
+## Using VM imaging tools to solve the BTRFS UUID problem.
+
+a typical contractual requirement in supplying VM images to another company is that all UUID
+images be different. With EXT family and many other FS, to an extent this could (if not
+installing a plethora of unfamiliar packages) be effectively 'faked' by tuning the fs
+and replacing known locations for references to it (e.g. regenerating initrd image)
+
+However, it is exceedingly difficult to implement this on a *generalized* level with BTRFS, as there is no *complete* cloning tool for a BTRFS filesystem to another filesystem with a different UUID - perfectly replicating a BTRFS filesystem (different snapshots, attributes and all) barring a different UUID requires creating a specific migration script with knowledge of the original filesystem. Solving for this for arbitrary BTRFS filesystems can only be currently done by recreating the exact steps that were used to create the original.
+
+This is exactly what StampedIron does through seedfile injection, unattended install, and bash script shim, allowing creation of arbitrary functionally identical BTRFS filesystems save for UUID, making contractual obligations in regard to delivery of BTRFS-backed server images much faster.
+
+example
+
+```
+(envsubst '$PROXY' < examples/seedfiles/debian.btrfs_raid1.mirrored.seed) > /tmp/preseed
+for id in 1 2 3; do
+    ( source example/apache_image.sh ; SEEDFILE=/tmp/preseed; OUTDIR=/srv/apache$id; ./pipeline.sh )
+done
 
 ```
