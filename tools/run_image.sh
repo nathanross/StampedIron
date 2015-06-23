@@ -16,10 +16,11 @@
 #
 
 DIR=$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )
+. $DIR/_common.sh
+
 d_virsh=`dirname $DIR`/virsh
 
 export IFS=''
-error() { echo -e $@; exit 1; }
 split() {
     local -n ret=$1
     local -r delim=$2
@@ -66,15 +67,6 @@ BLOCKING= 1:block until VM halts then print runtime. 0 is default.
 
 
 "
-}
-mkdtmp() {
-    local -n l=$1;
-    if [ $WORKDIR ]; then
-       l="${WORKDIR}/`date +%s%N`"
-       mkdir -p $l
-    else
-        l=`mktemp -d 2>/dev/null || mktemp -d -t 'mytmpdir'`
-    fi
 }
 insert() {
     local -n newarr=$1

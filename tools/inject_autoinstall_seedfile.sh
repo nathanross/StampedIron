@@ -15,27 +15,9 @@
 # limitations under the License.
 #
 
-# to run:
-# pass as 1st argument the name of the preseed file you want to inject.
-# optional 2nd argument: path to 'cp -r' to cd root
-#
-# assumes you want to inject the seedfile in ubunt server,
-# change the appropriate bash glob pattern below if not.
 DIR=$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )
+. $DIR/_common.sh
 export IFS=''
-export WORKDIR=${WORKDIR:-"/opt/build/tmp"}
-
-error() { echo -e $@; exit 1; }
-
-mkdtmp() {
-    local -n l=$1;
-    if [ $WORKDIR ]; then
-       l="${WORKDIR}/`date +%s%N`"
-       mkdir -p $l
-    else
-        l=`mktemp -d 2>/dev/null || mktemp -d -t 'mytmpdir'`
-    fi
-}
 
 append_late_command() {
     local -n ret_string=$1
@@ -154,4 +136,3 @@ main() {
 }
 
 main $@
-

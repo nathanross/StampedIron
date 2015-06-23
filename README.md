@@ -57,7 +57,7 @@ apt-get -y install virsh qemu-kvm
 mkdir /var/cache/install_discs
 wget -c http://cdimage.debian.org/debian-cd/8.1.0/amd64/iso-cd/debian-8.1.0-amd64-CD-1.iso -P /var/cache/install_discs
 virsh net-create virsh/network.xml
-squid_ip=( source examples/squid_image.sh ; ./stampedIron.sh )
+squid_ip=$( source examples/squid_image.sh ; ./stampedIron.sh )
 export PROXY=$squid_ip:3128
 
 

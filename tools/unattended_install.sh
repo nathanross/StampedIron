@@ -15,8 +15,8 @@
 # limitations under the License.
 #
 DIR=$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )
+. $DIR/_common.sh
 export IFS=''
-error() { echo -e $@; exit 1; }
 
 main() {
     local -r autoinstall_iso=$1 out_device=$2 size=${3:-"14.5G"}
@@ -35,7 +35,7 @@ unattended_install.sh <autoinstall_iso> <out_device> (<new_disk_size>)\n
     
     [ ! -e $out_device ] && qemu-img create $out_device $size
     start_time=`date +%s`
-    nice -n-10 kvm -hda ${out_device} -cdrom ${autoinstall_iso} -smp 2 -m 512 -boot d
+    nice -n-10 kvm -hda ${out_device} -cdrom ${autoinstall_iso} -smp 2 -m 1024 -boot d
     end_time=`date +%s`
     echo "start,$start_time"
     echo "end,$end_time"

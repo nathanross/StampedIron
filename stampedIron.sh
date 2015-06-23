@@ -1,11 +1,11 @@
 #!/bin/bash
 DIR=$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )
 stampedIron=${DIR}
-toolsdir=${DIR}/tools
+d_tools=${DIR}/tools
 cookbook=$stampedIron/examples/recipes
 
 usage() {
-    #if $1; then echo "error: ${1}"; fi
+    [ "$1" ] && echo "error: $@";
     echo -e "
     stampedIron.sh
 
@@ -43,48 +43,52 @@ optional env dirs:
     exit 1
 }
 
-scratch=${SCRATCH:-''}
-[ -d $scratch ] || usage 'must provide a dir $SCRATCH'
 
-outdir=${OUTDIR:-''}
-[ -d $outdir ] || usage 'must provide a dir $OUTDIR'
+main() {
+    scratch=${SCRATCH:-''}
+    [ -d $scratch ] || usage 'must provide a dir $SCRATCH'
 
-src=${SRC:-''}
-[ -f $src ] || usage 'must provide a file $SRC'
+    outdir=${OUTDIR:-''}
+    [ -d $outdir ] || usage 'must provide a dir $OUTDIR'
 
-seedfile=(env -i cookbook=$stampedIron/examples/seedfiles envsubst '$cookbook'<<< $SEEDFILE )
-[ -f $seedfile ] || usage 'must provide a file $SEEDFILE'
+    src=${SRC:-''}
+    [ -f $src ] || usage 'must provide a file $SRC'
 
-[ $RECIPES ] || usage 'must provide $RECIPES'
-recipes=(env -i cookbook=$stampedIron/examples/recipes envsubst '$cookbook'<<< $RECIPES )
+    subst () { echo $2 | envsubst $3; }
 
-fname_iso=${FNAME_ISO:-auto_install.iso}
-fname_disk=${FNAME_DISK:-output.disk}
-recreate_iso=${RECREATE_ISO:-0}
-force_reinstall=${FORCE_REINSTALL:-0}
-force_reinstall=${RUN_VARS:-''}
-debug=${DEBUG:-0}
+    seedfile=`echo $SEEDFILE | env -i cookbook=$stampedIron/examples/seedfiles envsubst '$cookbook'`
+    [ -f $seedfile ] || usage "must provide a file \$SEEDFILE, you provided $seedfile"
 
+    [ "$RECIPES" ] || usage 'must provide $RECIPES'
+    recipes=`echo $RECIPES | env -i cookbook=$stampedIron/examples/recipes envsubst '$cookbook'`
 
-mkdir -p $scratch
-
-if [ ! -e $outdir/$fname_iso ] ||
-       ( [ $recreate_iso -eq 1 ] ); then
-    #todo no env var, just check if preseed is more recently modified.
-    (env -i PROXY=192.168.124.8:3128 envsubst '$PROXY'< $stampedIron/examples/seedfiles/debian.btrfs_raid1.mirroredl.seed) > /tmp/preseed
-    WORKDIR=$scratch $d_tools/./inject_autoinstall_seedfile.sh $src $outdir/$fname_iso /tmp/preseed
-    FORCE_REINSTALL=1
-fi
-
-if [ ! -e $outdir/$disk.bak ] || [ $force_reinstall -eq 1 ]; then
-    WORKDIR=$scratch $d_tools/./unattended_install.sh $outdir/$fname_iso $outdir/$fname_disk
-    cp $outdir/$disk $outdir/$fname_disk.bak
-else
-    [ $debug -eq 0 ] && \
-        cp $outdir/$fname_disk.bak $outdir/$fname_disk
-fi
-
-$RUN_VARS $d_tools/./run_image.sh $outdir/$fname_disk::1 \
-   $recipes
+    fname_iso=${FNAME_ISO:-auto_install.iso}
+    fname_disk=${FNAME_DISK:-output.disk}
+    recreate_iso=${RECREATE_ISO:-0}
+    force_reinstall=${FORCE_REINSTALL:-0}
+    force_reinstall=${RUN_VARS:-''}
+    debug=${DEBUG:-0}
 
 
+    mkdir -p $scratch
+
+    if [ ! -e $outdir/$fname_iso ] ||
+           ( [ $recreate_iso -eq 1 ] ); then
+        #todo no env var, just check if preseed is more recently modified.
+        (env -i PROXY=192.168.124.8:3128 envsubst '$PROXY'< $stampedIron/examples/seedfiles/debian.btrfs_raid1.mirroredl.seed) > /tmp/preseed
+        WORKDIR=$scratch $d_tools/./inject_autoinstall_seedfile.sh $src $outdir/$fname_iso /tmp/preseed || exit 1
+        FORCE_REINSTALL=1
+    fi
+
+    if [ ! -e $outdir/$disk.bak ] || [ $force_reinstall -eq 1 ]; then
+        WORKDIR=$scratch $d_tools/./unattended_install.sh $outdir/$fname_iso $outdir/$fname_disk || exit 1
+        cp $outdir/$disk $outdir/$fname_disk.bak || exit 1
+    else
+        [ $debug -eq 0 ] && \
+            cp $outdir/$fname_disk.bak $outdir/$fname_disk || exit 1
+    fi
+
+    $RUN_VARS $d_tools/./run_image.sh $outdir/$fname_disk::1 \
+              $recipes
+}
+main $@
