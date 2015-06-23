@@ -16,6 +16,8 @@
 #
 
 DIR=$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )
+d_virsh=`dirname $DIR`/virsh
+
 export IFS=''
 error() { echo -e $@; exit 1; }
 split() {
@@ -149,11 +151,12 @@ main() {
     done
     [ ! $disks ] && usage
     env -i name=$name mem=`expr $memMB \* 1024` vcpu=$vcpu disks=$disks \
-        envsubst < ${DIR}/virsh/domain.xml > $tmpdir/domain.xml
+        envsubst < ${d_virsh}/default_domain.xml > $tmpdir/domain.xml
     [ $verbose -eq 1 ] && cat $tmpdir/domain.xml
 
     start_time=`date +%s`
     cat $tmpdir/domain.xml
+    virsh net-create ${d_virsh}/default_network.xml 2>/dev/null >/dev/null    
     virsh create $tmpdir/domain.xml 
     sleep 4
 
