@@ -15,6 +15,14 @@
 # limitations under the License.
 #
 
+export USAGE_MSG=" 
+ inject_seedfile.sh <src iso> <out iso> <seed file> (<file or dir to copy to cd root>)
+
+ environment variables:
+ WORKDIR - store temporary files HERE instead of temp directory.
+ DISTRO - (deprecated) distro of cd. Supported values: debian, ubuntu 
+"
+
 DIR=$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )
 . $DIR/_common.sh
 export IFS=''
@@ -66,13 +74,7 @@ main() {
     ([ ! ${src_iso} ] || [ ! -e ${src_iso} ] || \
         [ ! ${seedfile} ] || [ ! -e ${seedfile} ] || \
         ( [ $copydir ] && [ ! -e ${copydir} ] )) && \
-        error " \n
- inject_seedfile.sh <src iso> <out iso> <seed file> (<file or dir to copy to cd root>)\n
-\n
- environment variables:\n
- WORKDIR - store temporary files HERE instead of temp directory.\n
- DISTRO - (deprecated) distro of cd. Supported values: debian, ubuntu \n
-"
+        usage
 
     local d_mntiso='' d_newiso=''
     mkdtmp d_newiso

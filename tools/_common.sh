@@ -26,3 +26,8 @@ mkdtmp() {
         l=`mktemp -d 2>/dev/null || mktemp -d -t 'mytmpdir'`
     fi
 }
+
+usage() {
+    [ "$1" ] && echo "error: $@";
+    error $USAGE_MSG
+}

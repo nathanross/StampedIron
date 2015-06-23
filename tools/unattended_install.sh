@@ -14,6 +14,15 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
+export USAGE_MSG="
+unattended_install.sh <autoinstall_iso> <out_device> (<new_disk_size>)
+
+    <out_device>: device or disk image to install to.
+       if a non-existent path, creates raw .img of size <new_disk_size> 
+
+    <new_disk_size> defaults to 14.5gb
+"
+
 DIR=$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )
 . $DIR/_common.sh
 export IFS=''
@@ -21,17 +30,9 @@ export IFS=''
 main() {
     local -r autoinstall_iso=$1 out_device=$2 size=${3:-"14.5G"}
 
-    #usage
     ([ ! $autoinstall_iso ] || [ ! -e $autoinstall_iso ] || \
         [ ! $out_device ]) && \
-        error "\n
-unattended_install.sh <autoinstall_iso> <out_device> (<new_disk_size>)\n
-\n
-    <out_device>: device or disk image to install to.\n
-       if a non-existent path, creates raw .img of size <new_disk_size> \n
-\n
-    <new_disk_size> defaults to 14.5gb
-"
+        usage
     
     [ ! -e $out_device ] && qemu-img create $out_device $size
     start_time=`date +%s`

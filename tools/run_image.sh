@@ -15,6 +15,24 @@
 # limitations under the License.
 #
 
+export USAGE_MSG="
+run_image.sh <image>:prio (<folder or .img to add as sdb>:prio)
+this script is for building images using the automation shim, or launching
+an image with boilerplate settings for debugging.
+
+This project is for making the building of VMs easier, and likewise
+you'll have more flexibility and scalability in provisioning VMs if
+you create your own domain file for use with virsh, or another 
+hypervisor leveraging tool / VMM like Qemu, Virtualbox, VMWare, etc.
+
+environment vars:
+NAME = name to give to instance
+VCPU= num of vcpus. 2 is default
+MEM= amount of mem to use in MB. 1024 is default
+VERBOSE= 1:print generated domain file. 0 is default.
+BLOCKING= 1:block until VM halts then print runtime. 0 is default.
+"
+
 DIR=$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )
 . $DIR/_common.sh
 
@@ -47,26 +65,7 @@ split() {
     [ $on_delim -eq 0 ] && ret+=("$agg")    
 }
 usage() {
-    error "\n
-run_image.sh <image>:prio (<folder or .img to add as sdb>:prio)\n
-this script is for building images using the automation shim, or launching\n
-an image with boilerplate settings for debugging.\n
-\n
-This project is for making the building of VMs easier, and likewise\n
-you'll have more flexibility and scalability in provisioning VMs if \n
-you create your own domain file for use with virsh, or another \n
-hypervisor leveraging tool / VMM like Qemu, Virtualbox, VMWare, etc.\n
-\n
-
-environment vars:
-NAME = name to give to instance
-VCPU= num of vcpus. 2 is default
-MEM= amount of mem to use in MB. 1024 is default
-VERBOSE= 1:print generated domain file. 0 is default.
-BLOCKING= 1:block until VM halts then print runtime. 0 is default.
-
-
-"
+    error 
 }
 insert() {
     local -n newarr=$1
@@ -107,7 +106,7 @@ main() {
         l_disk=`readlink -f ${arr_disk[0]}`        
         bootprio=${arr_disk[1]:-"`expr 100 + $i`"}
         envadd=${arr_disk[2]}
-        [[ $bootprio =~ $int_re ]] || usage
+        [[ $bootprio =~ $int_re ]] || usage 
         [ ! -e $l_disk ] && \
             error "asked to use disk at $l_disk but no file/dir exists there"
         if [[ ${l_disk} =~ \.iso$ ]]; then

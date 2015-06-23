@@ -1,12 +1,21 @@
 #!/bin/bash
-DIR=$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )
-stampedIron=${DIR}
-d_tools=${DIR}/tools
-cookbook=$stampedIron/examples/recipes
 
-usage() {
-    [ "$1" ] && echo "error: $@";
-    echo -e "
+# Copyright 2015 Nathan Ross
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#
+
+export USAGE_MSG="
     stampedIron.sh
 
     takes a set of vars as to where to create an installed image
@@ -40,21 +49,17 @@ optional env dirs:
     DEBUG : do not launch image (+run any recipes) from 
      raw installed disk, but from cooked/live image.
 "
-    exit 1
-}
 
+DIR=$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )
+. ${DIR}/tools/_common.sh
+stampedIron=${DIR}
+d_tools=${DIR}/tools
+cookbook=$stampedIron/examples/recipes
 
 main() {
-    scratch=${SCRATCH:-''}
-    [ -d $scratch ] || usage 'must provide a dir $SCRATCH'
-
-    outdir=${OUTDIR:-''}
+    local -r scratch=$SCRATCH outdir=$OUTDIR src=$SRC
     [ -d $outdir ] || usage 'must provide a dir $OUTDIR'
-
-    src=${SRC:-''}
     [ -f $src ] || usage 'must provide a file $SRC'
-
-    subst () { echo $2 | envsubst $3; }
 
     seedfile=`echo $SEEDFILE | env -i cookbook=$stampedIron/examples/seedfiles envsubst '$cookbook'`
     [ -f $seedfile ] || usage "must provide a file \$SEEDFILE, you provided $seedfile"
@@ -62,22 +67,19 @@ main() {
     [ "$RECIPES" ] || usage 'must provide $RECIPES'
     recipes=`echo $RECIPES | env -i cookbook=$stampedIron/examples/recipes envsubst '$cookbook'`
 
-    fname_iso=${FNAME_ISO:-auto_install.iso}
-    fname_disk=${FNAME_DISK:-output.disk}
-    recreate_iso=${RECREATE_ISO:-0}
-    force_reinstall=${FORCE_REINSTALL:-0}
-    force_reinstall=${RUN_VARS:-''}
-    debug=${DEBUG:-0}
-
-
-    mkdir -p $scratch
-
+    local -r fname_iso=${FNAME_ISO:-auto_install.iso} \
+          fname_disk=${FNAME_DISK:-output.disk} \
+          recreate_iso=${RECREATE_ISO:-0} \
+          run_vars=${RUN_VARS:-''} \
+          debug=${DEBUG:-0}
+    local force_reinstall=${FORCE_REINSTALL:-0}
+    
     if [ ! -e $outdir/$fname_iso ] ||
            ( [ $recreate_iso -eq 1 ] ); then
         #todo no env var, just check if preseed is more recently modified.
         (env -i PROXY=192.168.124.8:3128 envsubst '$PROXY'< $stampedIron/examples/seedfiles/debian.btrfs_raid1.mirroredl.seed) > /tmp/preseed
         WORKDIR=$scratch $d_tools/./inject_autoinstall_seedfile.sh $src $outdir/$fname_iso /tmp/preseed || exit 1
-        FORCE_REINSTALL=1
+        force_reinstall=1
     fi
 
     if [ ! -e $outdir/$disk.bak ] || [ $force_reinstall -eq 1 ]; then
