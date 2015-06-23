@@ -90,7 +90,9 @@ insert() {
 }
 main() {
     local -r name=${NAME:-vcon`date +%s`} vcpu=${VCPU:-2} memMB=${MEM:-512}
-    local disks='' bootprio='' l_disk=''    
+    local disks='' bootprio='' l_disk=''
+    local wait_for_ip=${WAIT_FOR_IP:-0} blocking=${BLOCKING:-0}
+    local verbose=${VERBOSE:-0}
 
     int_re='^[0-9]+$'
     
@@ -148,15 +150,14 @@ main() {
     [ ! $disks ] && usage
     env -i name=$name mem=`expr $memMB \* 1024` vcpu=$vcpu disks=$disks \
         envsubst < ${DIR}/virsh/domain.xml > $tmpdir/domain.xml
-    [ $VERBOSE ] && [ $VERBOSE -eq 1 ] && cat $tmpdir/domain.xml
+    [ $verbose -eq 1 ] && cat $tmpdir/domain.xml
 
     start_time=`date +%s`
     cat $tmpdir/domain.xml
     virsh create $tmpdir/domain.xml 
     sleep 4
 
-    if ! (([ $BLOCKING ] && [ $BLOCKING -eq 1 ]) ||
-              ([ $WAIT_FOR_IP ] && [ $WAIT_FOR_IP -eq 1 ])); then
+    if ! ([ $blocking -eq 1 ] || [ $wait_for_ip -eq 1 ]); then
         exit 0
     fi
        
@@ -173,7 +174,7 @@ main() {
                 echo "ip,$ip"
                 ip_printed=1
             fi
-            if ([ ! $BLOCKING ] || [ $BLOCKING -eq 0 ]) &&
+            if ([ $blocking -eq 0 ]) &&
                ([ $ip_printed -eq 1 ] || [ $diff -gt 60 ]); then
                 rm -rf $tmpdir
                 exit 0
@@ -182,7 +183,7 @@ main() {
         sleep 1
     done
     # in case machine exits in < 30 seconds
-    if [ $BLOCKING ] && [ $BLOCKING -eq 1 ]; then
+    if [ $blocking -eq 1 ]; then
         end_time=`date +%s`
         echo "start,$start_time"
         echo "end,$end_time"
