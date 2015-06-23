@@ -3,20 +3,59 @@ DIR=$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )
 stampedIron=${DIR}
 cookbook=$stampedIron/examples/recipes
 
-error() { echo $1; exit 1; }
+usage() {
+    #if $1; then echo "error: ${1}"; fi
+    echo -e "
+    pipeline.sh
+
+    takes a set of vars as to where to create an installed image
+    and from what sources (seedfile, recipes), and creates the 
+    installed image.
+
+    caches autoinstall iso and base unattended install for
+    faster iteration when tweaking changes to recipes
+
+required env dirs:
+    SCRATCH : dir for storing large temporary files
+    SRC : source iso for creating autoinstall iso
+    SEEDFILE : source seedfile for creating autoinstall iso
+     value \$cookbook in this var will be replaced with
+     this directory's example/seedfiles
+    RECIPES : recipes, if any, to run on raw installed image.
+     value \$cookbook in this var will be replaced with
+     this directory's example/recipes
+    OUTDIR : dir for outputting autoinstall iso,
+             raw installed image, and cooked image.
+
+optional env dirs:
+    FNAME_ISO : name of autoinstall iso. default is auto_install.iso
+    FNAME_DISK : name of cooked image, default is output.disk
+    RECREATE_ISO : if you've changed the seedfile, set this to 1
+     to recreate the seedfile
+    FORCE_REINSTALL : create a new raw installed image from the
+     autoinstall iso; implied by no autoinstall iso or RECREATE_ISO.
+     only ever need to set this manually if you use ./run_image
+     on the autoinstall iso accidentally.
+    DEBUG : do not launch image (+run any recipes) from 
+     raw installed disk, but from cooked/live image.
+"
+    exit 1
+}
 
 scratch=${SCRATCH:-''}
-[ -d $scratch ] || error 'must provide a dir $SCRATCH'
-
+[ -d $scratch ] || usage 'must provide a dir $SCRATCH'
 
 outdir=${OUTDIR:-''}
-[ -d $outdir ] || error 'must provide a dir $OUTDIR'
+[ -d $outdir ] || usage 'must provide a dir $OUTDIR'
 
 src=${SRC:-''}
-[ -f $src ] || error 'must provide a file $SRC'
+[ -f $src ] || usage 'must provide a file $SRC'
 
-[ $RECIPES ] || error 'must provide $RECIPES'
-recipes=(envsubst '$cookbook'<<< $RECIPES )
+seedfile=(env -i cookbook=$stampedIron/examples/seedfiles envsubst '$cookbook'<<< $SEEDFILE )
+[ -f $seedfile ] || usage 'must provide a file $SEEDFILE'
+
+[ $RECIPES ] || usage 'must provide $RECIPES'
+recipes=(env -i cookbook=$stampedIron/examples/recipes envsubst '$cookbook'<<< $RECIPES )
 
 fname_iso=${FNAME_ISO:-auto_install.iso}
 fname_disk=${FNAME_DISK:-output.disk}
