@@ -16,7 +16,7 @@
 #
 
 export USAGE_MSG="
-    stampedIron.sh
+    stampedIron
 
     takes a set of vars as to where to create an installed image
     and from what sources (seedfile, recipes), and creates the 
