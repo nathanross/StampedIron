@@ -1,27 +1,29 @@
 #!/bin/bash
 DIR=$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )
 stampedIron=${DIR}
+cookbook=$stampedIron/examples/recipes
 
 error() { echo $1; exit 1; }
 
-([ $SCRATCH ] && [ -d $SCRATCH ]) || error '$SCRATCH not provided'
-scratch=$SCRATCH
+scratch=${SCRATCH:-''}
+[ -d $scratch ] || error 'must provide a dir $SCRATCH'
 
-([ $OUTDIR ] && [ -d $OUTDIR ]) || error '$OUTDIR not provided'
-outdir=$OUTDIR
 
-([ $SRC ] && [ -f $SRC ]) || error '$SRC iso not provided'
-src=$SRC
+outdir=${OUTDIR:-''}
+[ -d $outdir ] || error 'must provide a dir $OUTDIR'
 
-([ $RECIPE ] && [ -d $RECIPE ]) || error '$RECIPE dir not provided'
-recipe=RECIPE
+src=${SRC:-''}
+[ -f $src ] || error 'must provide a file $SRC'
+
+[ $RECIPES ] || error 'must provide $RECIPES'
+recipes=(envsubst '$cookbook'<<< $RECIPES )
 
 fname_iso=${FNAME_ISO:-auto_install.iso}
 fname_disk=${FNAME_DISK:-output.disk}
 recreate_iso=${RECREATE_ISO:-0}
 force_reinstall=${FORCE_REINSTALL:-0}
 debug=${DEBUG:-0}
-cookbook=$stampedIron/examples/recipes
+
 
 mkdir -p $scratch
 
@@ -37,12 +39,11 @@ if [ ! -e $outdir/$disk.bak ] || [ $force_reinstall -eq 1 ]; then
     WORKDIR=$scratch $stampedIron/./unattended_install.sh $outdir/$fname_iso $outdir/$fname_disk
     cp $outdir/$disk $outdir/$fname_disk.bak
 else
-    [ $debug -eq 0 ] && cp $outdir/$fname_disk.bak $outdir/$fname_disk
+    [ $debug -eq 0 ] && \
+        cp $outdir/$fname_disk.bak $outdir/$fname_disk
 fi
 
 MEM=1024 $stampedIron/./run_image.sh $outdir/$fname_disk::1 \
-   "$cookbook/proxy_http/::::PROXY_ADDR=192.168.124.8:3128" \
-   ${recipe} \
-   $cookbook/proxy_http/rm_proxy \
-   $cookbook/shutdown
+   $recipes
+
 
