@@ -83,7 +83,7 @@ main() {
         force_reinstall=1
     fi
 
-    if [ ! -e $outdir/$disk.bak ] || [ $force_reinstall -eq 1 ]; then
+    if [ ! -e $outdir/$fname_disk.bak ] || [ $force_reinstall -eq 1 ]; then
         dbg $d_tools/./unattended_install.sh $outdir/$fname_iso $outdir/$fname_disk || exit 1
         cp $outdir/$fname_disk $outdir/$fname_disk.bak || exit 1
     else
@@ -91,7 +91,8 @@ main() {
             cp $outdir/$fname_disk.bak $outdir/$fname_disk || exit 1
     fi
 
-    dbg $RUN_VARS $d_tools/./run_image.sh $outdir/$fname_disk::1 \
+    export $RUN_VARS
+    dbg $d_tools/./run_image.sh $outdir/$fname_disk::1 \
               $recipes
 }
 main $@

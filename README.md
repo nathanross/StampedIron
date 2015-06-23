@@ -60,7 +60,6 @@ virsh net-create virsh/network.xml
 squid_ip=$( source examples/squid_image.sh ; ./stampedIron.sh )
 export PROXY=$squid_ip:3128
 
-
 # with full upgrade, having a proxy will typically reduce unattended install time by 30-40%
 ```
 
