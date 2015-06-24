@@ -24,8 +24,26 @@ export USAGE_MSG="
 "
 
 DIR=$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )
-. $DIR/_common.sh
 export IFS=''
+#-- common --
+
+error() { echo -e $@; exit 1; }
+usage() { [ "$1" ] && echo "error: $@"; error $USAGE_MSG; }
+dbg() {[ "$VERBOSE" ] && [ $VERBOSE -eq 1 ] && echo "$@"; $@; }
+is_int() { return [[ $1 =~ '^[0-9]+$' ]]; }
+mkdtmp() {
+    local -n l=$1;
+    if [ "$WORKDIR" ]; then
+       l="${WORKDIR}/`date +%s%N`"
+       mkdir -p $l
+    else
+        l=`mktemp -d 2>/dev/null || mktemp -d -t 'mytmpdir'`
+    fi
+}
+#layer of indirection to avoid returnvar scoping bug, see NOTES
+rcv() { local -n ret=$1; $2 ret "${@:3}"; }
+
+#-- /common --
 
 append_late_command() {
     local -n ret_string=$1
@@ -108,16 +126,12 @@ main() {
         # command is extant in the user's preseed, the shim
         # late command is appended to it.
 
-        #can't name it seed_data because bash doesn't
-        #respect scoping in that context. the return value is valid
-        #at the end of the subfunc. call but 
-        #after the call finishes gets returned as none.
-        local seed_data_f
-        append_late_command seed_data_f \
+        local seed_data
+        rcv seed_data append_late_command \
                             `cat ${DIR}/automation_shim/late_command.seed` \
                             `cat $seedfile`
-        [ $dist = "ubuntu" ] && mod_ubuntu $d_newiso $seed_data_f
-        [ $dist = "debian" ] && mod_debian $d_newiso $seed_data_f
+        [ $dist = "ubuntu" ] && mod_ubuntu $d_newiso $seed_data
+        [ $dist = "debian" ] && mod_debian $d_newiso $seed_data
     fi
     
     #D stands for disable deep directory relocation

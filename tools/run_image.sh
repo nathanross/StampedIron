@@ -34,11 +34,29 @@ BLOCKING= 1:block until VM halts then print runtime. 0 is default.
 "
 
 DIR=$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )
-. $DIR/_common.sh
-
 d_virsh=`dirname $DIR`/virsh
-
 export IFS=''
+
+#-- common --
+
+error() { echo -e $@; exit 1; }
+usage() { [ "$1" ] && echo "error: $@"; error $USAGE_MSG; }
+dbg() {[ "$VERBOSE" ] && [ $VERBOSE -eq 1 ] && echo "$@"; $@; }
+is_int() { return [[ $1 =~ '^[0-9]+$' ]]; }
+mkdtmp() {
+    local -n l=$1;
+    if [ "$WORKDIR" ]; then
+       l="${WORKDIR}/`date +%s%N`"
+       mkdir -p $l
+    else
+        l=`mktemp -d 2>/dev/null || mktemp -d -t 'mytmpdir'`
+    fi
+}
+#layer of indirection to avoid returnvar scoping bug, see NOTES
+rcv() { local -n ret=$1; $2 ret "${@:3}"; }
+
+#-- /common --
+
 split() {
     local -n ret=$1
     local -r delim=$2
@@ -64,9 +82,7 @@ split() {
     done
     [ $on_delim -eq 0 ] && ret+=("$agg")    
 }
-usage() {
-    error 
-}
+
 insert() {
     local -n newarr=$1
     local pos=$2 newval=$3 oldarr=("${@:4}")
@@ -81,55 +97,74 @@ insert() {
     [ $i -eq $pos ] && newarr+=($newval)
     
 }
-main() {
-    local -r name=${NAME:-vcon`date +%s`} vcpu=${VCPU:-2} memMB=${MEM:-1024}
-    local disks='' bootprio='' l_disk=''
-    local wait_for_ip=${WAIT_FOR_IP:-0} blocking=${BLOCKING:-0}
-    local verbose=${VERBOSE:-0}
 
-    int_re='^[0-9]+$'
+genDiskStr() {
+    local -n outstr=$1    
+    local -r l_disk=$2 bootprio=$3 diskId=$4
     
-    mkdtmp tmpdir
-    devicename=(a b c d e f g h i j)
-    #todo pass permissions for real tmpdir
-    # so need to use named tmpdirs
-    i=0
-    rm -rf /tmp/si_env
-    mkdir -p /tmp/si_env
-    envdir=/tmp/si_env
-    insert disk_args 1 "$envdir::200" "$@"
-    i=0
-    for x in ${disk_args[*]}
-    do
-        unset arr_disk
-        split arr_disk :: "$x"
-        l_disk=`readlink -f ${arr_disk[0]}`        
-        bootprio=${arr_disk[1]:-"`expr 100 + $i`"}
-        envadd=${arr_disk[2]}
-        [[ $bootprio =~ $int_re ]] || usage 
-        [ ! -e $l_disk ] && \
-            error "asked to use disk at $l_disk but no file/dir exists there"
-        if [[ ${l_disk} =~ \.iso$ ]]; then
-            device="type='file' device='cdrom'"
-            driver="name='qemu' type='raw'"
-            source="file='${l_disk}'"
-        elif [ -d $l_disk ]; then
-            device="type='dir' device='disk'><readonly/"
-            driver="name='qemu'"
-            source="dir='${l_disk}'"
-        else
-            device="type='file' device='disk'"
-            driver="name='qemu' type='raw'"
-            source="file='${l_disk}'"
-        fi
-        disks="${disks}
-    <disk $device>
+    #split up disk entry, provide 100+i value for
+    # boot priority if none provided
+    local -r \
+          l_disk=`readlink -f ${arr_disk[0]}` \
+          bootprio=${arr_disk[1]:-"`expr 100 + $i`"} \
+          
+    envadd=${arr_disk[2]}
+
+    #sanity test
+    assert_int $bootprio || usage 
+    [ -e $l_disk ] || \
+        error "asked to use disk at $l_disk but no file/dir exists there"
+
+    device="type='file' device='disk'"
+    driver="name='qemu' type='raw'"
+    source="file='${l_disk}'"
+    
+    if [[ ${l_disk} =~ \.iso$ ]]; then
+        device="type='file' device='cdrom'"
+    elif [ -d $l_disk ]; then
+        device="type='dir' device='disk'><readonly/"
+        driver="name='qemu'"
+        source="dir='${l_disk}'"
+    fi
+
+    outstr="<disk $device>
       <driver $driver />
       <source $source />
       <target dev='sd${devicename[$i]}'/>
       <address type='drive' bus='0' target='0' unit='$i' />
       <boot order='${bootprio}' />
     </disk>"
+}
+
+main() {
+    local -r name=${NAME:-vcon`date +%s`} vcpu=${VCPU:-2} memMB=${MEM:-1024}
+    local disks='' bootprio='' l_disk=''
+    local wait_for_ip=${WAIT_FOR_IP:-0} blocking=${BLOCKING:-0}
+    local verbose=${VERBOSE:-0}
+    
+    devicename=(a b c d e f g h i j)
+    
+    #todo pass permissions for real tmpdir to virsh
+    # so don't need to use named tmpdirs
+    i=0
+    rm -rf /tmp/si_env
+    mkdir -p /tmp/si_env
+    envdir=/tmp/si_env
+    
+    [ ! "$1" ] && usage
+    
+    insert disk_args 1 "$envdir::200" "$@"
+    i=0
+    local diskstr envadd
+    local arr_disk    
+    for x in ${disk_args[*]}
+    do
+        unset arr_disk
+        unset env_args
+        split arr_disk :: "$x_in"
+        genDiskStr diskstr $arr_disk[0] $arr_disk[1] $i
+        disks="${disks}${diskstr}"        
+        envadd=$arr_disk[2]
         if [ $envadd ]; then
             split env_args ';' "$envadd"
             envfile="$envdir/sd${devicename[$i]}"
@@ -140,12 +175,14 @@ main() {
         fi
         i=`expr $i + 1`
     done
-    [ ! $disks ] && usage
+
+    start_time=`date +%s`
+
+    mkdtmp tmpdir
     env -i name=$name mem=`expr $memMB \* 1024` vcpu=$vcpu disks=$disks \
         envsubst < ${d_virsh}/default_domain.xml > $tmpdir/domain.xml
     [ $verbose -eq 1 ] && cat $tmpdir/domain.xml
 
-    start_time=`date +%s`
     cat $tmpdir/domain.xml
     virsh net-create ${d_virsh}/default_network.xml 2>/dev/null >/dev/null    
     virsh create $tmpdir/domain.xml 
@@ -179,9 +216,10 @@ main() {
     # in case machine exits in < 30 seconds
     if [ $blocking -eq 1 ]; then
         end_time=`date +%s`
-        echo "start,$start_time"
-        echo "end,$end_time"
-        echo "wait,`expr $end_time - $start_time`"
+        echo -e "
+                 start,$start_time
+                 end,$end_time
+                 wait,`expr $end_time - $start_time`"
     fi
     echo $tmpdir
     #rm -rf $tmpdir
