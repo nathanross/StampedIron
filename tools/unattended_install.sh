@@ -29,8 +29,8 @@ export IFS=''
 
 error() { echo -e $@; exit 1; }
 usage() { [ "$1" ] && echo "error: $@"; error $USAGE_MSG; }
-dbg() {[ "$VERBOSE" ] && [ $VERBOSE -eq 1 ] && echo "$@"; $@; }
-is_int() { return [[ $1 =~ '^[0-9]+$' ]]; }
+dbg() { [ "$VERBOSE" ] && [ $VERBOSE -eq 1 ] && echo "$@"; $@; }
+is_int() { [[ $1 =~ ^[0-9]+$ ]]; return $?; }
 mkdtmp() {
     local -n l=$1;
     if [ "$WORKDIR" ]; then
@@ -40,7 +40,7 @@ mkdtmp() {
         l=`mktemp -d 2>/dev/null || mktemp -d -t 'mytmpdir'`
     fi
 }
-#layer of indirection to avoid returnvar scoping bug, see NOTES
+#layer of indirection to avoid returnvar scoping bug, see README.md
 rcv() { local -n ret=$1; $2 ret "${@:3}"; }
 
 #-- /common --
@@ -48,8 +48,9 @@ rcv() { local -n ret=$1; $2 ret "${@:3}"; }
 main() {
     local -r autoinstall_iso=$1 out_device=$2 size=${3:-"14.5G"}
 
-    ([ ! $autoinstall_iso ] || [ ! -e $autoinstall_iso ] || \
-        [ ! $out_device ]) && \
+    ([ ! $autoinstall_iso ] || \
+         [ ! -e $autoinstall_iso ] || \
+         [ ! $out_device ]) && \
         usage
     
     [ ! -e $out_device ] && qemu-img create $out_device $size

@@ -5,8 +5,5 @@ export OUTDIR=/srv/squid \
        SRC=${src[0]} \
        SEEDFILE="\$cookbook/debian.ext4.seed" \
        RUN_VARS="WAIT_FOR_IP=1" \
-       RECIPES="
-   \$cookbook/squid
-   \$cookbook/shutdown
-"
+       RECIPES="\$cookbook/squid \$cookbook/shutdown"
 

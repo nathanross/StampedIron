@@ -56,8 +56,8 @@ export IFS=''
 
 error() { echo -e $@; exit 1; }
 usage() { [ "$1" ] && echo "error: $@"; error $USAGE_MSG; }
-dbg() {[ "$VERBOSE" ] && [ $VERBOSE -eq 1 ] && echo "$@"; $@; }
-is_int() { return [[ $1 =~ '^[0-9]+$' ]]; }
+dbg() { [ "$VERBOSE" ] && [ $VERBOSE -eq 1 ] && echo "$@"; $@; }
+is_int() { [[ $1 =~ ^[0-9]+$ ]]; return $?; }
 mkdtmp() {
     local -n l=$1;
     if [ "$WORKDIR" ]; then
@@ -106,13 +106,11 @@ main() {
     if [ ! -e $outdir/$fname_disk.bak ] || [ $force_reinstall -eq 1 ]; then
         dbg $d_tools/./unattended_install.sh $outdir/$fname_iso $outdir/$fname_disk || exit 1
         cp $outdir/$fname_disk $outdir/$fname_disk.bak || exit 1
-    else
-        [ $debug -eq 0 ] && \
-            cp $outdir/$fname_disk.bak $outdir/$fname_disk || exit 1
+    elif [ ! "$NO_COPY" ] || [ $NO_COPY -eq 0 ]; then
+        cp $outdir/$fname_disk.bak $outdir/$fname_disk || exit 1        
     fi
 
     export $RUN_VARS
-    dbg $d_tools/./run_image.sh $outdir/$fname_disk::1 \
-              $recipes
+    (IFS=' ' dbg $d_tools/./run_image.sh $outdir/$fname_disk::1 $recipes )
 }
 main $@

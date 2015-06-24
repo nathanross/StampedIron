@@ -41,8 +41,8 @@ export IFS=''
 
 error() { echo -e $@; exit 1; }
 usage() { [ "$1" ] && echo "error: $@"; error $USAGE_MSG; }
-dbg() {[ "$VERBOSE" ] && [ $VERBOSE -eq 1 ] && echo "$@"; $@; }
-is_int() { return [[ $1 =~ '^[0-9]+$' ]]; }
+dbg() { [ "$VERBOSE" ] && [ $VERBOSE -eq 1 ] && echo "$@"; $@; }
+is_int() { [[ $1 =~ ^[0-9]+$ ]]; return $?; }
 mkdtmp() {
     local -n l=$1;
     if [ "$WORKDIR" ]; then
@@ -52,17 +52,19 @@ mkdtmp() {
         l=`mktemp -d 2>/dev/null || mktemp -d -t 'mytmpdir'`
     fi
 }
-#layer of indirection to avoid returnvar scoping bug, see NOTES
+#layer of indirection to avoid returnvar scoping bug, see README.md
 rcv() { local -n ret=$1; $2 ret "${@:3}"; }
 
 #-- /common --
 
 split() {
-    local -n ret=$1
+    local -n ret_split=$1
     local -r delim=$2
     local -r txt=$3
+
+    local result=''
     IFS='';
-    ret=();
+    result=();
     local i=0;
     local delim_len=${#delim}
     local agg='' char='' lookahead='' on_delim=1;
@@ -70,7 +72,7 @@ split() {
         char="${txt:$i:1}"
         lookahead="${txt:$i:$delim_len}"
         if [ $lookahead = $delim ]; then
-            ret+=("$agg")
+            result+=("$agg")
             agg=""
             i=`expr $i + $delim_len`
             on_delim=1
@@ -80,7 +82,8 @@ split() {
             on_delim=0
         fi
     done
-    [ $on_delim -eq 0 ] && ret+=("$agg")    
+    [ $on_delim -eq 0 ] && result+=("$agg")
+    ret_split=(${result[*]})
 }
 
 insert() {
@@ -100,18 +103,18 @@ insert() {
 
 genDiskStr() {
     local -n outstr=$1    
-    local -r l_disk=$2 bootprio=$3 diskId=$4
-    
+    local -r l_disk_in=$2 bootprio_in=$3 diskId=$4
+
     #split up disk entry, provide 100+i value for
     # boot priority if none provided
     local -r \
-          l_disk=`readlink -f ${arr_disk[0]}` \
-          bootprio=${arr_disk[1]:-"`expr 100 + $i`"} \
-          
+          l_disk=`readlink -f $l_disk_in` \
+          bootprio=${boot_prio_in:-"`expr 100 + $i`"} \
+
     envadd=${arr_disk[2]}
 
     #sanity test
-    assert_int $bootprio || usage 
+    is_int $bootprio || usage
     [ -e $l_disk ] || \
         error "asked to use disk at $l_disk but no file/dir exists there"
 
@@ -152,8 +155,7 @@ main() {
     envdir=/tmp/si_env
     
     [ ! "$1" ] && usage
-    
-    insert disk_args 1 "$envdir::200" "$@"
+    rcv disk_args insert 1 "$envdir::200" "$@"
     i=0
     local diskstr envadd
     local arr_disk    
@@ -161,12 +163,13 @@ main() {
     do
         unset arr_disk
         unset env_args
-        split arr_disk :: "$x_in"
-        genDiskStr diskstr $arr_disk[0] $arr_disk[1] $i
+        split arr_disk :: "$x"
+
+        rcv diskstr genDiskStr ${arr_disk[0]} ${arr_disk[1]} $i
         disks="${disks}${diskstr}"        
-        envadd=$arr_disk[2]
-        if [ $envadd ]; then
-            split env_args ';' "$envadd"
+        envadd=${arr_disk[2]}
+        if [ "$envadd" ]; then
+            rcv env_args split ';' "$envadd"
             envfile="$envdir/sd${devicename[$i]}"
             for arg in env_args; do
                 echo "export " $envadd >> $envfile
@@ -183,7 +186,6 @@ main() {
         envsubst < ${d_virsh}/default_domain.xml > $tmpdir/domain.xml
     [ $verbose -eq 1 ] && cat $tmpdir/domain.xml
 
-    cat $tmpdir/domain.xml
     virsh net-create ${d_virsh}/default_network.xml 2>/dev/null >/dev/null    
     virsh create $tmpdir/domain.xml 
     sleep 4
