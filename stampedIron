@@ -105,8 +105,11 @@ main() {
 
     if [ ! -e $outdir/$fname_disk.bak ] || [ $force_reinstall -eq 1 ]; then
         dbg $d_tools/./unattended_install.sh $outdir/$fname_iso $outdir/$fname_disk || exit 1
+        rm -f $outdir/$fname.disk.bak
+        #copy benches as faster if you remove target file, strange as it may be.
         cp $outdir/$fname_disk $outdir/$fname_disk.bak || exit 1
     elif [ ! "$NO_COPY" ] || [ $NO_COPY -eq 0 ]; then
+        rm -f $outdir/$fname.disk 
         cp $outdir/$fname_disk.bak $outdir/$fname_disk || exit 1        
     fi
 
