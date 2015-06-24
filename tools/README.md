@@ -18,7 +18,7 @@ It is not merely that. It is a design pattern intended to pre-empt any mandelbug
 format_headline() {
    local -n ret_headline=$1;
    local headline=$2;
-   ret_headline=`echo $headline | tr '[:lower:]' '[:upper:]'   
+   ret_headline=`echo $headline | tr '[:lower:]' '[:upper:]'`
 }
 
 rcv() { local -n ret=$1; $2 ret "${@:3}"; }
@@ -53,5 +53,24 @@ use_rcv_pattern(){
     # prints out 'TEMPERATE WEATHER'
 }
 
+
+```
+
+Here is a more subtle example of the bug which shows how the bug can occur as long as there is not an intermediate label for the return variable, the 'control' and 'bug' and 'rcv pattern' fns are unchanged in this example.
+
+```
+
+_headline_timestamp() {
+   local -n timestamped_headline=$1
+   local headline=$2
+   timestamped_headline="$headline received `date +%s`"
+}
+
+format_headline() {
+   local -n ret_headline=$1;
+   local -r anycased=$2
+   local -r uppercased=`echo $anycased | tr '[:lower:]' '[:upper:]'`
+   _headline_timestamp $1 uppercased
+}
 
 ```
