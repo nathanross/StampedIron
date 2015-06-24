@@ -184,10 +184,16 @@ main() {
     mkdtmp tmpdir
     env -i name=$name mem=`expr $memMB \* 1024` vcpu=$vcpu disks=$disks \
         envsubst < ${d_virsh}/default_domain.xml > $tmpdir/domain.xml
-    [ $verbose -eq 1 ] && cat $tmpdir/domain.xml
+    virsh net-create ${d_virsh}/default_network.xml 2>/dev/null >/dev/null
 
-    virsh net-create ${d_virsh}/default_network.xml 2>/dev/null >/dev/null    
-    virsh create $tmpdir/domain.xml 
+
+    if [ $verbose -eq 1 ]; then
+        cat $tmpdir/domain.xml
+        virsh create $tmpdir/domain.xml
+    else
+        result=`virsh create $tmpdir/domain.xml`
+        if ! [ $? -eq 0 ]; then echo $result; rm -rf $tmpdir; exit 1; fi
+    fi
     sleep 4
 
     if ! ([ $blocking -eq 1 ] || [ $wait_for_ip -eq 1 ]); then
@@ -203,7 +209,7 @@ main() {
         diff=`expr $end_time - $start_time`
         if [ $ip_printed -eq 0 ]; then
             ip=`virsh net-dhcp-leases stampedIron | grep -i "$mac" | awk -v x=5 '{print $x }' | cut -d'/' -f1`
-            if [ $ip ]; then        
+            if [ $ip ]; then                
                 echo "ip,$ip"
                 ip_printed=1
             fi

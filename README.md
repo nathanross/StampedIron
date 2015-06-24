@@ -57,10 +57,16 @@ apt-get -y install virsh qemu-kvm
 mkdir /var/cache/install_discs
 wget -c http://cdimage.debian.org/debian-cd/8.1.0/amd64/iso-cd/debian-8.1.0-amd64-CD-1.iso -P /var/cache/install_discs
 virsh net-create virsh/network.xml
-squid_ip=$( source examples/squid_image.sh ; ./stampedIron )
+( source examples/squid_image.sh ; ./stampedIron )
+squid_ip=`WAIT_FOR_IP=1 ./tools/./run_image.sh /srv/squid/output.disk | cut -d, -f2`
 export PROXY=$squid_ip:3128
 
-# with full upgrade, having a proxy will typically reduce unattended install time by 30-40%
+#example, use the proxy with wget
+echo "HTTP_PROXY=$PROXY" >> ~/.wgetrc
+example_file=http://archive.org/download/ItsAllOverNowBabyBlue_201506/It%27s%20all%20over%20now%20baby%20blue.mp3
+wget $example_file
+wget $example_file
+
 ```
 
 ## Using VM imaging tools to solve the BTRFS UUID problem.
