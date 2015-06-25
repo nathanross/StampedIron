@@ -130,6 +130,7 @@ main() {
         rcv seed_data append_late_command \
                             `cat ${DIR}/automation_shim/late_command.seed` \
                             `cat $seedfile`
+        [ $VERBOSE -eq 1 ] && echo -e $seed_data
         [ $dist = "ubuntu" ] && mod_ubuntu $d_newiso $seed_data
         [ $dist = "debian" ] && mod_debian $d_newiso $seed_data
     fi

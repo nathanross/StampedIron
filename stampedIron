@@ -78,7 +78,7 @@ cookbook=$stampedIron/examples/recipes
 
 main() {
     local -r scratch=$SCRATCH outdir=$OUTDIR src=$SRC
-    [ -d $outdir ] || usage 'must provide a dir $OUTDIR'
+    [ -d $outdir ] || mkdir -p $outdir || usage 'must provide a dir $OUTDIR'
     [ -f $src ] || usage 'must provide a file $SRC'
 
     seedfile=`echo $SEEDFILE | env -i cookbook=$stampedIron/examples/seedfiles envsubst '$cookbook'`
@@ -98,7 +98,9 @@ main() {
            ( [ $recreate_iso -eq 1 ] ); then
         #todo no env var, just check if preseed is more recently modified.
         mkdtmp d_preseed
-        (envsubst < $seedfile) > $d_preseed/preseed
+        echo "proxy_addr"
+        echo $PROXY_ADDR
+        envsubst < $seedfile > $d_preseed/preseed
         dbg $d_tools/./inject_autoinstall_seedfile.sh $src $outdir/$fname_iso $d_preseed/preseed || exit 1
         force_reinstall=1
     fi

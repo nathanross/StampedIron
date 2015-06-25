@@ -59,7 +59,7 @@ wget -c http://cdimage.debian.org/debian-cd/8.1.0/amd64/iso-cd/debian-8.1.0-amd6
 virsh net-create virsh/network.xml
 ( source examples/squid_image.sh ; ./stampedIron )
 squid_ip=`WAIT_FOR_IP=1 ./tools/./run_image.sh /srv/squid/output.disk | cut -d, -f2`
-export PROXY=$squid_ip:3128
+export PROXY_SOCKET=$squid_ip:3128
 
 #example, use the proxy with wget
 echo "HTTP_PROXY=$PROXY" >> ~/.wgetrc
