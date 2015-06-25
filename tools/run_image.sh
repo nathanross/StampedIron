@@ -83,7 +83,11 @@ split() {
         fi
     done
     [ $on_delim -eq 0 ] && result+=("$agg")
-    ret_split=(${result[*]})
+    # fun fact, this is the only way to identically copy sparse
+    # arrays within a single assignment. A typifying comment
+    # from the TLDP array page comments:
+    # 'just when you thought you were still in kansas'
+    ret_split=("${result[@]}")
 }
 
 insert() {
@@ -164,11 +168,14 @@ main() {
         unset arr_disk
         unset env_args
         split arr_disk :: "$x"
-
+        echo "for arr_disk $arr_disk"
         rcv diskstr genDiskStr ${arr_disk[0]} ${arr_disk[1]} $i
-        disks="${disks}${diskstr}"        
-        envadd=${arr_disk[2]}
+        disks="${disks}${diskstr}"
+        echo "bootprio ${arr_disk[1]}"
+        envadd="${arr_disk[2]}"
+        echo "got envadd $envadd"
         if [ "$envadd" ]; then
+            echo "using envadd $envadd"
             rcv env_args split ';' "$envadd"
             envfile="$envdir/sd${devicename[$i]}"
             for arg in env_args; do
