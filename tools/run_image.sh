@@ -168,14 +168,10 @@ main() {
         unset arr_disk
         unset env_args
         split arr_disk :: "$x"
-        echo "for arr_disk $arr_disk"
         rcv diskstr genDiskStr ${arr_disk[0]} ${arr_disk[1]} $i
         disks="${disks}${diskstr}"
-        echo "bootprio ${arr_disk[1]}"
         envadd="${arr_disk[2]}"
-        echo "got envadd $envadd"
         if [ "$envadd" ]; then
-            echo "using envadd $envadd"
             rcv env_args split ';' "$envadd"
             envfile="$envdir/sd${devicename[$i]}"
             for arg in env_args; do

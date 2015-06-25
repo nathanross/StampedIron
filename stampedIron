@@ -98,8 +98,6 @@ main() {
            ( [ $recreate_iso -eq 1 ] ); then
         #todo no env var, just check if preseed is more recently modified.
         mkdtmp d_preseed
-        echo "proxy_addr"
-        echo $PROXY_ADDR
         envsubst < $seedfile > $d_preseed/preseed
         dbg $d_tools/./inject_autoinstall_seedfile.sh $src $outdir/$fname_iso $d_preseed/preseed || exit 1
         force_reinstall=1
@@ -115,7 +113,7 @@ main() {
         cp $outdir/$fname_disk.bak $outdir/$fname_disk || exit 1        
     fi
 
-    export $RUN_VARS
+    [ "$RUN_VARS" ] && export $RUN_VARS
     (IFS=' ' dbg $d_tools/./run_image.sh $outdir/$fname_disk::1 $recipes )
 }
 main $@
