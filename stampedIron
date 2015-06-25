@@ -81,9 +81,8 @@ main() {
     [ -d $outdir ] || mkdir -p $outdir || usage 'must provide a dir $OUTDIR'
     [ -f $src ] || usage 'must provide a file $SRC'
 
-    seedfile=`echo $SEEDFILE | env -i cookbook=$stampedIron/examples/seedfiles envsubst '$cookbook'`
-    [ -f $seedfile ] || usage "must provide a file \$SEEDFILE, you provided $seedfile"
-
+    seedfn=`echo $SEEDFN | env -i cookbook=$stampedIron/examples/seedfiles envsubst '$cookbook'`
+    
     [ "$RECIPES" ] || usage 'must provide $RECIPES'
     recipes=`echo $RECIPES | env -i cookbook=$stampedIron/examples/recipes envsubst '$cookbook'`
 
@@ -97,7 +96,10 @@ main() {
     if [ ! -e $outdir/$fname_iso ] ||
            ( [ $recreate_iso -eq 1 ] ); then
         #todo no env var, just check if preseed is more recently modified.
-        dbg $d_tools/./inject_autoinstall_seedfile.sh $src $outdir/$fname_iso $seedfile || exit 1
+        mkdtemp d_seed
+        $seedfn > $d_seed/seedfile 
+        dbg $d_tools/./inject_autoinstall_seedfile.sh $src $outdir/$fname_iso $d_seed/seedfile || exit 1
+        rm -r $d_seed
         force_reinstall=1
     fi
 
