@@ -97,9 +97,7 @@ main() {
     if [ ! -e $outdir/$fname_iso ] ||
            ( [ $recreate_iso -eq 1 ] ); then
         #todo no env var, just check if preseed is more recently modified.
-        mkdtmp d_preseed
-        envsubst < $seedfile > $d_preseed/preseed
-        dbg $d_tools/./inject_autoinstall_seedfile.sh $src $outdir/$fname_iso $d_preseed/preseed || exit 1
+        dbg $d_tools/./inject_autoinstall_seedfile.sh $src $outdir/$fname_iso $seedfile || exit 1
         force_reinstall=1
     fi
 

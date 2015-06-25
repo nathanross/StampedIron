@@ -15,8 +15,17 @@
 # limitations under the License.
 #
 
-# IMPORTANT IF YOU ADD A COMMENT ON THE SAME LINE AS A DIRECTIVE,
-# THAT DIRECTIVE WILL CAUSE AN ERROR OR BE IGNORED
+# IMPORTANT IF A DEBIAN PRESEED FILE HAS A COMMENT
+# ON THE SAME LINE AS A DIRECTIVE, THAT DIRECTIVE
+# WILL CAUSE AN ERROR OR BE IGNORED
+
+# Example of using M4 to parameterize preseed
+
+# GENERATE A PRESEED WHICH USES BTRFS_RAID1,
+# RUN m4 -D BTRFS_RAID1=1 debi...
+
+# TO GENERATE A PRESEED 
+
 
 # -- language, keymap ------------------------------
 d-i debian-installer/locale string en_US
@@ -35,23 +44,26 @@ d-i clock-setup/ntp boolean true
 d-i netcfg/choose_interface select eth0
 d-i netcfg/get_hostname string pc
 d-i netcfg/get_domain string loc.al
-#d-i mirror/http/mirror select us.archive.ubuntu.com
-#d-i mirror/country string us
-#d-i mirror/http/hostname string http.us.debian.org
-#d-i mirror/http/directory string /debian
+#d-i mirror/http/mirror select http.us.debian.org
+d-i mirror/country string us
+d-i mirror/http/hostname string ftp.us.debian.org
+d-i mirror/http/directory string /debian
 #d-i mirror/suite string testing
-#d-i mirror/http/proxy string
-#d-i apt-setup/use_mirror boolean true
 
-#no need to use mirror if we're just installing std task.
+ifdef(`PROXY_SOCKET', `
+d-i mirror/http/proxy string http://PROXY_SOCKET
+d-i apt-setup/use_mirror boolean true
+', `
+#d-i mirror/http/proxy string http://PROXY_SOCKET
 d-i apt-setup/use_mirror boolean false
+')
 
 
 # -- accounts ------------------------------------
 #both root password directives necessary for debian only.
 #but result is that in both root account has password a
 d-i passwd/root-password password a
-d-i passwd/root-password-again password a 
+d-i passwd/root-password-again password a
 d-i passwd/user-fullname string ace
 d-i passwd/username string ace
 d-i passwd/user-password password ace
@@ -63,9 +75,9 @@ d-i user-setup/encrypt-home boolean false
 
 # -- partman (boilerplate) ------------------------
 d-i partman-md/confirm boolean true
-d-i partman/confirm_write_new_label boolean true 
+d-i partman/confirm_write_new_label boolean true
 d-i partman/choose_partition \
-       select Finish partitioning and write changes to disk	        
+       select Finish partitioning and write changes to disk	
 d-i partman/confirm boolean true
 d-i partman/confirm_nooverwrite boolean true
 d-i partman/mount_style select label
@@ -73,22 +85,28 @@ d-i partman-basicfilesystems/no_swap boolean false
 
 
 # -- opt. packages or package groups -------------
-tasksel tasksel/first multiselect standard
-#d-i pkgsel/include string virt-what
-#set to none if no network.
-d-i pkgsel/upgrade select none
-#full-upgrade 
+# it's suggested that you use 'standard' here
+# 'desktop' is generally what you add if you want that.
+# but 'none' is always an option.
+# you can see the packages entailed in standard via
+# 'aptitude search ~pstandard ~prequired ~pimportant -F%p'
+tasksel tasksel/first multiselect none
 # set to select none if you don't want unattended.
 d-i pkgsel/update-policy select none
-#update apt sources
-d-i pkgsel/updatedb boolean false
+#update apt packages db, set to false if no network
+d-i pkgsel/updatedb boolean true
+#set to none if no network.
+#full-upgrade for full-upgrade
+d-i pkgsel/upgrade select none
+
 
 # -- apt and sources list -----------------------
 #don't ask for next cd.
 d-i apt-setup/main boolean true
 d-i apt-setup/contrib boolean true
+d-i apt-setup/services-select multiselect security, updates
 d-i apt-setup/cdrom/set-first boolean false
-d-i apt-setup/cdrom/set-next boolean false   
+d-i apt-setup/cdrom/set-next boolean false
 d-i apt-setup/cdrom/set-failed boolean false
 popularity-contest popularity-contest/participate boolean false
 
@@ -102,14 +120,14 @@ d-i partman-auto/method string regular
 # prio partitions mean only one will expand.
 # expect to use manual config for now.
 d-i partman-auto/expert_recipe string \
-      boot-gpt :: \
-            512 512 512 fat16         \
+      ext4-gpt :: \
+              512 512 512 fat16         \
                 $primary{ }             \
                 $iflabel{ gpt }         \
                 method{ efi }           \
                 label { boot }          \
                 format{ }               . \
-            12000 50 15001 ext4 \
+              12000 50 15001 ext4 \
                 $primary{ } \
                 $bootable{ } \
                 method{ format } format{ } \
@@ -117,13 +135,13 @@ d-i partman-auto/expert_recipe string \
                 filesystem{ ext4 } \
                 mountpoint{ / } \
                 options/noatime{ noatime } . \
-            500 100 2000 linux-swap \
+              500 100 2000 linux-swap \
                 $primary{ } \
                 method{ swap } format{ } .
 
 d-i partman-auto/expert_recipe string \
-      boot-mbr :: \
-            12000 50 15001 ext4 \
+      ext4-mbr :: \
+              12000 50 15001 ext4 \
                 $primary{ } \
                 $bootable{ } \
                 method{ format } format{ } \
@@ -131,9 +149,60 @@ d-i partman-auto/expert_recipe string \
                 filesystem{ ext4 } \
                 mountpoint{ / } \
                 options/noatime{ noatime } . \
-            500 100 2000 linux-swap \
+              500 100 2000 linux-swap \
                 $primary{ } \
                 method{ swap } format{ } .
+
+d-i partman-auto/expert_recipe string \
+      btrfs-raid1-gpt :: \
+              512 512 512 fat16         \
+                $primary{ }             \
+                $iflabel{ gpt }         \
+                method{ efi }           \
+                label { boot }          \
+                format{ }               . \
+              6800 50 6801 btrfs        \
+                method{ format } format{ } \
+                use_filesystem{ }        \
+                filesystem{ btrfs }      \
+                mountpoint{ / }          \
+                label { usb_raid }       \
+                options/noatime{ noatime } . \
+              6800 50 6801 btrfs         \
+                method{ }                \
+                filesystem{ btrfs } \
+                options/noatime{ noatime } . \
+              100 5 -1 ext4                \
+                $bootable{ }             \
+                method{ }                \
+                filesystem{ ext4 }       \
+                options/noatime{ noatime } .
+
+d-i partman-auto/expert_recipe string \
+      btrfs-raid1-mbr :: \
+              7200 50 7201 btrfs \
+                $primary{ } \
+                $bootable{ } \
+                method{ format } format{ } \
+                use_filesystem{ } \
+                filesystem{ btrfs } \
+                mountpoint{ / } \
+                options/ssd{ ssd } \
+                options/noatime{ noatime } . \
+              7200 50 7201 btrfs \
+                $primary{ } \
+                $bootable{ } \
+                method{ } \
+                filesystem{ btrfs } \
+                options/noatime{ noatime } . \
+            100 5 -1 ext4 \
+                $primary{ }  \
+                $bootable{ } \
+                method{ format } format{ } \
+                use_filesystem{ } \
+                filesystem{ ext4 } \
+                mountpoint{ /boot } \
+                options/noatime{ noatime } .
 
 #GPT install - the below lines should be uncommented if you want a GPT
 #install, and commented out if you want MBR
@@ -151,8 +220,15 @@ d-i partman-auto/expert_recipe string \
 #MBR install - the below lines should be uncommented if you want an MBR
 #install, and commented out if you want GPT
 d-i   grub-installer/bootdev string /dev/sda
-d-i   partman-auto/choose_recipe      select boot-mbr
-
+ifelse(BTRFS_RAID1, `true', `
+d-i   partman-auto/choose_recipe select btrfs-raid1-mbr
+d-i preseed/late_command string \
+    in-target btrfs device add -f /dev/sda2 /; \
+    in-target btrfs balance start -dconvert=raid1 -mconvert=raid1 /;
+', `
+d-i   partman-auto/choose_recipe select ext4-mbr
+'
+)
 # -- grub and reboot ----------------------------
 d-i grub-installer/only_debian boolean true
 d-i finish-install/reboot_in_progress note
