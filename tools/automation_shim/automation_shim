@@ -23,21 +23,23 @@ echo -e "nameserver 75.75.75.75\nnameserver 75.75.76.76" > /etc/resolv.conf
 [ ! /dev/sdb1 ] && exit 0
 mkdir -p /opt/envs
 mount /dev/sdb1 /opt/envs
+mntdir=/mnt/stamped_iron_auto
+mkdir -p $mntdir
 for i in c d e f g h i j
 do
     taskname="sd${i}"
     if [ -e /dev/${taskname}1 ]; then        
-        mount /dev/${taskname}1 /mnt
-        if [ -e /mnt/run.sh ]; then
-            chmod +x /mnt/run.sh
+        mount /dev/${taskname}1 $mntdir
+        if [ -e $mntdir/run.sh ]; then
+            chmod +x $mntdir/run.sh
             envfile=/opt/envs/${taskname}
             if [ -e $envfile ]; then
-                (. /./${envfile} ; /mnt/./run.sh >>/var/log/automation_shim 2>&1 )
+                (. /./${envfile} ; $mntdir/./run.sh >>/var/log/automation_shim 2>&1 )
             else
-                /mnt/./run.sh >>/var/log/automation_shim 2>&1
+                $mntdir/./run.sh >>/var/log/automation_shim 2>&1
             fi
         fi
-        umount /mnt
+        umount $mntdir
     fi
 done
 umount /opt/envs
