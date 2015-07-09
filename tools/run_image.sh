@@ -120,7 +120,7 @@ genDiskStr() {
     #sanity test
     is_int $bootprio || usage
     [ -e $l_disk ] || \
-        error "asked to use disk at $l_disk but no file/dir exists there"
+        error "asked to use disk at <$l_disk> but no file/dir exists there"
 
     device="type='file' device='disk'"
     driver="name='qemu' type='raw'"
@@ -162,12 +162,22 @@ main() {
     rcv disk_args insert 1 "$envdir::200" "$@"
     i=0
     local diskstr envadd
-    local arr_disk    
+    local arr_disk y
     for x in ${disk_args[*]}
     do
         unset arr_disk
         unset env_args
-        split arr_disk :: "$x"
+        # replace newlines with spaces
+        # rm leading and trailing whitespace
+        # the way sed reg. works,
+        # just using lazy operator
+        # won't work here, the lazy operator still
+        # captures the whitespace.
+        y="`echo "$x" | tr '\n' ' ' | sed -r 's/^ *(.*?[^ ]) *$/\1/g'`"
+        
+        #continue if empty/ doesn't appear valid.
+        `echo -e "$y" | grep -E "^[^a-zA-Z0-9]*$" >/dev/null` && continue
+        split arr_disk :: "$y"
         rcv diskstr genDiskStr ${arr_disk[0]} ${arr_disk[1]} $i
         disks="${disks}${diskstr}"
         envadd="${arr_disk[2]}"
