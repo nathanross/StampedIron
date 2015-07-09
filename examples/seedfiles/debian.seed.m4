@@ -120,7 +120,7 @@ d-i partman-auto/method string regular
 # prio partitions mean only one will expand.
 # expect to use manual config for now.
 d-i partman-auto/expert_recipe string \
-      ext4-gpt :: \
+      extgpt :: \
               512 512 512 fat16         \
                 $primary{ }             \
                 $iflabel{ gpt }         \
@@ -140,7 +140,7 @@ d-i partman-auto/expert_recipe string \
                 method{ swap } format{ } .
 
 d-i partman-auto/expert_recipe string \
-      ext4-mbr :: \
+      extmbr :: \
               12000 50 15001 ext4 \
                 $primary{ } \
                 $bootable{ } \
@@ -154,7 +154,7 @@ d-i partman-auto/expert_recipe string \
                 method{ swap } format{ } .
 
 d-i partman-auto/expert_recipe string \
-      btrfs-raid1-gpt :: \
+      btrfsgpt :: \
               512 512 512 fat16         \
                 $primary{ }             \
                 $iflabel{ gpt }         \
@@ -179,7 +179,7 @@ d-i partman-auto/expert_recipe string \
                 options/noatime{ noatime } .
 
 d-i partman-auto/expert_recipe string \
-      btrfs-raid1-mbr :: \
+      btrfsmbr :: \
               7200 50 7201 btrfs \
                 $primary{ } \
                 $bootable{ } \
@@ -221,12 +221,12 @@ d-i partman-auto/expert_recipe string \
 #install, and commented out if you want GPT
 d-i   grub-installer/bootdev string /dev/sda
 ifelse(BTRFS_RAID1, `true', `
-d-i   partman-auto/choose_recipe select btrfs-raid1-mbr
+d-i   partman-auto/choose_recipe select btrfsmbr
 d-i preseed/late_command string \
     in-target btrfs device add -f /dev/sda2 /; \
     in-target btrfs balance start -dconvert=raid1 -mconvert=raid1 /;
 ', `
-d-i   partman-auto/choose_recipe select ext4-mbr
+d-i   partman-auto/choose_recipe select ext4mbr
 '
 )
 # -- grub and reboot ----------------------------
