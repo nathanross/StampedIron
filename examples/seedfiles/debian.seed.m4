@@ -115,6 +115,13 @@ popularity-contest popularity-contest/participate boolean false
 # -- partitioning ---------------------------------
 d-i partman-auto/method string regular
 
+define(TOTAL_S, ifdef('TOTAL_SIZE', 14500))
+define(USABLE_S, eval(`TOTAL_S' `-1000'))
+define(USABLE_SP, eval(`USABLE_S' `+1'))
+define(HALF_USABLE_S, eval(`USABLE_S' `/2'))
+define(HALF_USABLE_SP, eval(`HALF_USABLE_S' `+1'))
+
+
 # the percentage priority system works in a way
 # not exactly as you might expect - two equal
 # prio partitions mean only one will expand.
@@ -127,7 +134,7 @@ d-i partman-auto/expert_recipe string \
                 method{ efi }           \
                 label { boot }          \
                 format{ }               . \
-              12000 50 15001 ext4 \
+              USABLE_S 50 USABLE_SP ext4 \
                 $primary{ } \
                 $bootable{ } \
                 method{ format } format{ } \
@@ -141,7 +148,7 @@ d-i partman-auto/expert_recipe string \
 
 d-i partman-auto/expert_recipe string \
       extmbr :: \
-              12000 50 15001 ext4 \
+              USABLE_S 50 USABLE_SP ext4 \
                 $primary{ } \
                 $bootable{ } \
                 method{ format } format{ } \
@@ -161,14 +168,14 @@ d-i partman-auto/expert_recipe string \
                 method{ efi }           \
                 label { boot }          \
                 format{ }               . \
-              6800 50 6801 btrfs        \
+              HALF_USABLE_S 50 HALF_USABLE_SP btrfs        \
                 method{ format } format{ } \
                 use_filesystem{ }        \
                 filesystem{ btrfs }      \
                 mountpoint{ / }          \
                 label { usb_raid }       \
                 options/noatime{ noatime } . \
-              6800 50 6801 btrfs         \
+              HALF_USABLE_S 50 HALF_USABLE_SP btrfs         \
                 method{ }                \
                 filesystem{ btrfs } \
                 options/noatime{ noatime } . \
@@ -180,7 +187,7 @@ d-i partman-auto/expert_recipe string \
 
 d-i partman-auto/expert_recipe string \
       btrfsmbr :: \
-              7200 50 7201 btrfs \
+              HALF_USABLE_S 50 HALF_USABLE_SP btrfs \
                 $primary{ } \
                 $bootable{ } \
                 method{ format } format{ } \
@@ -189,7 +196,7 @@ d-i partman-auto/expert_recipe string \
                 mountpoint{ / } \
                 options/ssd{ ssd } \
                 options/noatime{ noatime } . \
-              7200 50 7201 btrfs \
+              HALF_USABLE_S 50 HALF_USABLE_SP btrfs \
                 $primary{ } \
                 $bootable{ } \
                 method{ } \
