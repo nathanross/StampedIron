@@ -89,28 +89,32 @@ main() {
           fname_disk=${FNAME_DISK:-output.disk} \
           recreate_iso=${RECREATE_ISO:-0} \
           run_vars=${RUN_VARS:-''} \
+          size=${SIZE:-"14.5G"} \
           debug=${DEBUG:-0}
     local force_reinstall=${FORCE_REINSTALL:-0}
-    
-    if [ ! -e $outdir/$fname_iso ] ||
+    if [ ! -e $outdir/$fname_disk ] ||
            ( [ $recreate_iso -eq 1 ] ); then
-        #todo no env var, just check if preseed is more recently modified.
-        mkdtmp d_seed
-        (export IFS=' ';
-         eval $seedfun > $d_seed/seedfile
-        )
-        echo $d_seed
-        if [ "`cat $d_seed/seedfile | wc -l`" -lt 2 ]; then
-            echo "error seedfile error."
-            exit 1
+        if [ ! -e $outdir/$fname_iso ] ||
+               ( [ $recreate_iso -eq 1 ] ); then
+            #todo no env var, just check if preseed is more recently modified.
+            mkdtmp d_seed
+            (export IFS=' ';
+             eval $seedfun > $d_seed/seedfile
+            )
+            echo "seedfile dir: $d_seed"        
+            if [ "`cat $d_seed/seedfile | wc -l`" -lt 2 ]; then
+                echo "error seedfile error."
+                exit 1
+            fi
+            dbg $d_tools/./inject_autoinstall_seedfile.sh $src $outdir/$fname_iso $d_seed/seedfile || exit 1
+            rm -r $d_seed
+            force_reinstall=1
         fi
-        dbg $d_tools/./inject_autoinstall_seedfile.sh $src $outdir/$fname_iso $d_seed/seedfile || exit 1
-        rm -r $d_seed
-        force_reinstall=1
     fi
 
-    if [ ! -e $outdir/$fname_disk.bak ] || [ $force_reinstall -eq 1 ]; then
-        dbg $d_tools/./unattended_install.sh $outdir/$fname_iso $outdir/$fname_disk || exit 1
+    if ( ! ( [ "$NO_COPY" ] && [ $NO_COPY -eq 1 ] && [ -e $outdir/$fname_disk ] ) ) &&
+       ( [ ! -e $outdir/$fname_disk.bak ] || [ $force_reinstall -eq 1 ] ); then
+        dbg $d_tools/./unattended_install.sh $outdir/$fname_iso $outdir/$fname_disk $size || exit 1
         rm -f $outdir/$fname.disk.bak
         #copy benches as faster if you remove target file, strange as it may be.
         cp $outdir/$fname_disk $outdir/$fname_disk.bak || exit 1
