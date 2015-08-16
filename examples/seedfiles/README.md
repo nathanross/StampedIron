@@ -10,10 +10,12 @@ These will produce healthy defaults for a seedfile. If you
 don't want to use M4, you can just edit this generated file.
 
 However, as an example of what M4 macros, each seedfile has
-a macro allowing you to specify the socket addr for a package
-downloading proxy.
+a macro allowing you to specify the
 
-```m4 -D SOCKET_ADDR=192.168.10.8:3128 debian.seed.m4 > debian.seed```
+1. socket addr for a package downloading proxy.
+2. total size of disk for more predictable partition sizes (default 14.5GB)
+
+```m4 -D PROXY_SOCKET=192.168.10.8:3128 -D TOTAL_SIZE=10000 debian.seed.m4 > debian.seed```
 
 The other macro in these files is meant to show the complexity
 of partitioning available in seedfiles. E.g. passing BTRFS_RAID1=true
