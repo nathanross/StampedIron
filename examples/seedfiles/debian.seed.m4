@@ -233,7 +233,7 @@ d-i preseed/late_command string \
     in-target btrfs device add -f /dev/sda2 /; \
     in-target btrfs balance start -dconvert=raid1 -mconvert=raid1 /;
 ', `
-d-i   partman-auto/choose_recipe select ext4mbr
+d-i   partman-auto/choose_recipe select extmbr
 '
 )
 # -- grub and reboot ----------------------------
