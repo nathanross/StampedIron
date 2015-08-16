@@ -115,11 +115,11 @@ popularity-contest popularity-contest/participate boolean false
 # -- partitioning ---------------------------------
 d-i partman-auto/method string regular
 
-define(TOTAL_S, ifdef('TOTAL_SIZE', 14500))
-define(USABLE_S, eval(`TOTAL_S' `-1000'))
-define(USABLE_SP, eval(`USABLE_S' `+1'))
-define(HALF_USABLE_S, eval(`USABLE_S' `/2'))
-define(HALF_USABLE_SP, eval(`HALF_USABLE_S' `+1'))
+define(TOTAL_S, ifdef(`TOTAL_SIZE', `TOTAL_SIZE', 14500))
+define(USABLE_S, eval(TOTAL_S `-1000'))
+define(USABLE_SP, eval(USABLE_S ` + 1'))
+define(HALF_USABLE_S, eval(USABLE_S ` / 2'))
+define(HALF_USABLE_SP, eval(HALF_USABLE_S ` + 1'))
 
 
 # the percentage priority system works in a way
