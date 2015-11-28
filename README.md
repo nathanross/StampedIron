@@ -18,7 +18,7 @@ But loss of security does not have to be a cost of automation: gaining that secu
 
 The idea of this tool isn't to solve any problems in any new, or even particularly interesting way. Rather in the most predictable way, such that sysadmins (who need to keep in mind endemic major chain-of-trust problems inherent in many container and VM build automation tools) resigned to rolling their own script bootstrap, can basically look at these scripts and, without having to dig through unrelated complexity, see many exact same steps he would have taken, and either use it as a guide or as it is.
 
-##stampedIron.sh :
+##stampedIron :
 
 a convenience script for creating vm instances. Runs the below scripts in series using the provided input sources (seedfiles, recipe dirs), caching the results of the first (autoinstall iso) and second (installed disk image) for easy testing of recipe chanegs.
 
@@ -53,16 +53,21 @@ There are some tools that do similar work.
 
 
 ```
+#install requisite software and add stampedIron to path
 apt-get -y install virsh qemu-kvm
-mkdir /var/cache/install_discs
+export PATH=$PATH:`pwd`
+
+#create directory for source installation media
+mkdir -p /var/cache/install_discs
 wget -c http://cdimage.debian.org/debian-cd/8.1.0/amd64/iso-cd/debian-8.1.0-amd64-CD-1.iso -P /var/cache/install_discs
-virsh net-create virsh/network.xml
-( source examples/squid_image.sh ; ./stampedIron )
-squid_ip=`WAIT_FOR_IP=1 ./tools/./run_image.sh /srv/squid/output.disk | cut -d, -f2`
-export PROXY_SOCKET=$squid_ip:3128
+
+#ensure vm is created, and run it, returning the IP
+mkdir -p /srv/squid
+./examples/squid_image.sh
+proxy_socket=`WAIT_FOR_IP=1 ./tools/./run_image.sh /srv/squid/output.disk | cut -d, -f2`:3128
 
 #example, use the proxy with wget
-echo "HTTP_PROXY=$PROXY" >> ~/.wgetrc
+echo "HTTP_PROXY=$proxy_socket" >> ~/.wgetrc
 example_file=http://archive.org/download/ItsAllOverNowBabyBlue_201506/It%27s%20all%20over%20now%20baby%20blue.mp3
 wget $example_file
 wget $example_file
@@ -85,7 +90,7 @@ example
 ```
 (envsubst '$PROXY' < examples/seedfiles/debian.btrfs_raid1.mirrored.seed) > /tmp/preseed
 for id in 1 2 3; do
-    ( source example/apache_image.sh ; SEEDFILE=/tmp/preseed; OUTDIR=/srv/apache$id; ./stampedIron )
+    ./example/apache_image.sh --func-genseed "cat /tmp/preseed" --dirpath-product /srv/apache$id
 done
 
 ```

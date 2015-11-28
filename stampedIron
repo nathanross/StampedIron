@@ -18,6 +18,8 @@
 export USAGE_MSG="
     stampedIron
 
+    simplified pipeline for running the stampedIron tool binaries.
+
     takes a set of vars as to where to create an installed image
     and from what sources (seedfile, recipes), and creates the 
     installed image.
@@ -25,29 +27,58 @@ export USAGE_MSG="
     caches autoinstall iso and base unattended install for
     faster iteration when tweaking changes to recipes
 
-required env dirs:
-    SCRATCH : dir for storing large temporary files
-    SRC : source iso for creating autoinstall iso
-    SEEDFILE : source seedfile for creating autoinstall iso
-     value \$cookbook in this var will be replaced with
-     this directory's example/seedfiles
-    RECIPES : recipes, if any, to run on raw installed image.
-     value \$cookbook in this var will be replaced with
-     this directory's example/recipes
-    OUTDIR : dir for outputting autoinstall iso,
-             raw installed image, and cooked image.
+    A 'blank disk' refers to the vanilla disk image called by merely
+    using the generated iso
+
+    A 'product disk' refers to a blank disk which has also had any post-install processes run.
+
+    all arguments below can be passed in as environment variables
+    by changing to uppercase and changing interstitial dashes to underscores
+
+always required args:
+    --fpath-src-iso
+          source iso for creating autoinstall iso
+    --dirpath-product
+          dir for storing generated iso, blank disk, and output disk
+
+conditionally required args:
+    --recipes
+          a set of recipes to run on 
+          the blank disk to produce the product disk. 
+          required if a product disk is being created.
+          can use special variable \$cookbook which is
+          replaced with example/recipes
+    --func-seedgen
+          evaluable function that generates a seedfile.
+          can use special variable \$cookbook which is
+          replaced with example/seedfiles
+          required if an iso is being created.
+    --dirpath-scratch
+          dir for storing large temporary files
+          required if an iso is being created.
 
 optional env dirs:
-    FNAME_ISO : name of autoinstall iso. default is auto_install.iso
-    FNAME_DISK : name of cooked image, default is output.disk
-    RECREATE_ISO : if you've changed the seedfile, set this to 1
-     to recreate the seedfile
-    FORCE_REINSTALL : create a new raw installed image from the
-     autoinstall iso; implied by no autoinstall iso or RECREATE_ISO.
-     only ever need to set this manually if you use ./run_image
-     on the autoinstall iso accidentally.
-    DEBUG : do not launch image (+run any recipes) from 
-     raw installed disk, but from cooked/live image.
+    --fname-dest-iso
+          filename for any generated intermediary iso
+    --fname-blank-disk
+          filename for any generated disk blank
+    --fname-product-disk
+          filename for any generated product disk
+    --disk-size
+          size of blank and product disk
+    -1|--force-refresh-product-disk
+          recreate the product disk 
+          from the blank disk even if the product disk exists.
+    -2|--force-refresh-blank-disk
+          if a product disk is being created,
+           always recreate the blank disk from the iso.    
+    -3|--force-refresh-iso
+          if a blank disk is being created,
+           always recreate the iso from the seedfile
+    --run-vars
+          environment variables to pass into the launched instance.
+    -v|--verbose
+          make verbose
 "
 
 DIR=$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )
@@ -72,58 +103,135 @@ rcv() { local -n ret=$1; $2 ret "${@:3}"; }
 
 #-- /common --
 
-stampedIron=${DIR}
-d_tools=${DIR}/tools
-cookbook=$stampedIron/examples/recipes
+force_create_iso() {
+    local -r \
+          func_genseed_in="$1" \
+          fpath_src_iso_in="$2" \
+          fname_dest_iso_in="$3"
+
+    mkdtmp tmpd_seedgen
+    (export IFS=' ';
+     eval $func_genseed_in > $tmpd_seedgen/seedfile
+    )
+    echo "generated seedfile dir: $tmpd_seedgen"        
+    if [ "`cat $tmpd_seedgen/seedfile | wc -l`" -lt 2 ]; then
+        echo "error seedfile error."
+        exit 1
+    fi
+    dbg $d_tools/./inject_autoinstall_seedfile.sh $fpath_src_iso_in $fpath_dest_iso_in $tmpd_seedgen/seedfile || exit 1
+    rm -r $tmpd_seedgen
+}
+
+require() {
+    local -n myOut="$1"
+    [ "$2" ] || usage "we require $1 but that value was not provided"
+    myOut="$2"
+}
+
+mainWithArgs() {
+    local -r stampedIron=${DIR}
+    #must be on separate lines because assigns are unordered
+    local -r \
+          d_tools=$stampedIron/tools \
+          d_cookbook=$stampedIron/examples/recipes \
+          d_seedfiles=$stampedIron/examples/seedfiles
+    
+    require d_product $DIRPATH_PRODUCT
+    require fpath_src_iso $FPATH_SRC_ISO
+
+    local -r \
+          fpath_dest_iso=$d_product/${FNAME_DEST_ISO:-auto_install.iso} \
+          fpath_blank_disk=$d_product/${FNAME_BLANK_DISK:-blank.disk} \
+          fpath_product_disk=$d_product/${FNAME_PRODUCT_DISK:-product.disk} \
+          run_vars=${RUN_VARS:-''} \
+          size=${DISK_SIZE:-"14.5G"} \
+          verbose=${VERBOSE:-0} \
+          force_refresh_iso_from_seedfile=${FORCE_REFRESH_ISO:-0} \
+          force_refresh_blankdisk_from_iso=${FORCE_REFRESH_BLANK_DISK:-0} \
+          force_refresh_productdisk_from_blankdisk=${FORCE_REFRESH_PRODUCT_DISK:-0}
+    [ -d $d_product ] || mkdir -p $d_product || usage 'must provide a dir $OUTDIR'
+
+
+    #to run the correct product disk, we must ensure we have the product disk required
+    if ( [ $force_refresh_productdisk_from_blankdisk -eq 1 ] ||
+             [ ! -e $fpath_product_disk ] ); then
+        [ "$RECIPES" ] || usage 'must provide $RECIPES'
+        recipes=`echo $RECIPES | env -i cookbook=$d_cookbook envsubst '$cookbook'`
+        #to do this we must first ensure we have the blank disk required
+        if ([ $force_refresh_blankdisk_from_iso -eq 1 ] ||
+                [ ! -e $fpath_blank_disk ]); then
+            #to do this we must first ensure we have the injected iso required
+            if ([ $force_refresh_iso_from_seedfile -eq 1 ] ||
+                    [ ! -e $fpath_dest_iso ]); then
+                [ -f $fpath_src_iso ] || usage "fpath_src_iso value $fpath_src_iso is not a file"
+                [ "$DIRPATH_SCRATCH" ] || usage 'since we are recreating the iso with these options, you must provide $DIRPATH_SCRATCH'
+                [ "$FUNC_SEEDGEN" ] || usage 'since we are recreating the iso with these options, you must provide $FUNC_SEEDGEN'
+                func_genseed=`echo $FUNC_SEEDGEN | env -i cookbook=$d_seedfiles envsubst '$cookbook'`
+                rm -f $fpath_dest_iso
+                force_create_iso "$func_genseed" "$fpath_src_iso" "$fpath_dest_iso"
+            fi
+            rm -f $fpath_blank_disk
+            dbg $d_tools/./unattended_install.sh $fpath_dest_iso $fpath_blank_disk $size || exit 1
+        fi
+        rm -f $fpath_product_disk
+        cp $fpath_blank_disk $fpath_product_disk.tmp || exit 1
+        export $run_vars
+        (IFS=' ' dbg $d_tools/./run_image.sh $fpath_product_disk::1 $recipes )
+    else
+        (IFS=' ' dbg $d_tools/./run_image.sh $fpath_product_disk::1)
+    fi    
+}
 
 main() {
-    local -r scratch=$SCRATCH outdir=$OUTDIR src=$SRC
-    [ -d $outdir ] || mkdir -p $outdir || usage 'must provide a dir $OUTDIR'
-    [ -f $src ] || usage 'must provide a file $SRC'
-
-    seedfun=`echo $SEEDFUN | env -i cookbook=$stampedIron/examples/seedfiles envsubst '$cookbook'`
-    [ "$RECIPES" ] || usage 'must provide $RECIPES'
-    recipes=`echo $RECIPES | env -i cookbook=$stampedIron/examples/recipes envsubst '$cookbook'`
-
-    local -r fname_iso=${FNAME_ISO:-auto_install.iso} \
-          fname_disk=${FNAME_DISK:-output.disk} \
-          recreate_iso=${RECREATE_ISO:-0} \
-          run_vars=${RUN_VARS:-''} \
-          size=${SIZE:-"14.5G"} \
-          debug=${DEBUG:-0}
-    local force_reinstall=${FORCE_REINSTALL:-0}
-    if [ ! -e $outdir/$fname_disk ] ||
-           ( [ $recreate_iso -eq 1 ] ); then
-        if [ ! -e $outdir/$fname_iso ] ||
-               ( [ $recreate_iso -eq 1 ] ); then
-            #todo no env var, just check if preseed is more recently modified.
-            mkdtmp d_seed
-            (export IFS=' ';
-             eval $seedfun > $d_seed/seedfile
-            )
-            echo "seedfile dir: $d_seed"        
-            if [ "`cat $d_seed/seedfile | wc -l`" -lt 2 ]; then
-                echo "error seedfile error."
-                exit 1
-            fi
-            dbg $d_tools/./inject_autoinstall_seedfile.sh $src $outdir/$fname_iso $d_seed/seedfile || exit 1
-            rm -r $d_seed
-            force_reinstall=1
-        fi
-    fi
-
-    if ( ! ( [ "$NO_COPY" ] && [ $NO_COPY -eq 1 ] && [ -e $outdir/$fname_disk ] ) ) &&
-       ( [ ! -e $outdir/$fname_disk.bak ] || [ $force_reinstall -eq 1 ] ); then
-        dbg $d_tools/./unattended_install.sh $outdir/$fname_iso $outdir/$fname_disk $size || exit 1
-        rm -f $outdir/$fname.disk.bak
-        #copy benches as faster if you remove target file, strange as it may be.
-        cp $outdir/$fname_disk $outdir/$fname_disk.bak || exit 1
-    elif [ ! "$NO_COPY" ] || [ $NO_COPY -eq 0 ]; then
-        rm -f $outdir/$fname.disk 
-        cp $outdir/$fname_disk.bak $outdir/$fname_disk || exit 1        
-    fi
-
-    [ "$RUN_VARS" ] && export $RUN_VARS
-    (IFS=' ' dbg $d_tools/./run_image.sh $outdir/$fname_disk::1 $recipes )
+    while true; do
+        case "$1" in
+            --fpath-src-iso)
+                export FPATH_SRC_ISO="$2";
+                shift 2 ;;
+            --dirpath-product)
+                export DIRPATH_PRODUCT="$2";
+                shift 2 ;;
+            --dirpath-scratch)
+                export DIRPATH_SCRATCH="$2";
+                shift 2 ;;
+            --recipes)
+                export RECIPES="$2";
+                shift 2 ;;
+            --func-seedgen)
+                export FUNC_SEEDGEN="$2";
+                shift 2 ;;
+            --fname-dest-iso)
+                export FNAME_DEST_ISO="$2";
+                shift 2 ;;
+            --fname-blank-disk)
+                export FNAME_BLANK_DISK="$2";
+                shift 2 ;;
+            --fname-product-disk)
+                export FNAME_PRODUCT_DISK="$2";
+                shift 2 ;;
+            --disk-size)
+                export DISK_SIZE="$2";
+                shift 2 ;;
+            -3 | --force-refresh-iso)
+                export FORCE_REFRESH_ISO=1
+                shift ;;
+            -2 | --force-refresh-blank-disk)
+                export FORCE_REFRESH_BLANK_DISK=1
+                shift ;;
+            -1 | --force-refresh-product-disk)
+                export FORCE_REFRESH_PRODUCT_DISK=1
+                shift ;;
+            --run-vars)
+                export RUN_VARS="$2"
+                shift 2 ;;
+            -v | --verbose)
+                export VERBOSE=1
+                shift ;;
+            --) shift; break ;;
+            * ) [ "$1" ] && usage "did not recognize option $1... exiting"
+                break;;
+        esac
+    done
+    mainWithArgs
 }
 main $@
