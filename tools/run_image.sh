@@ -31,6 +31,7 @@ VCPU= num of vcpus. 2 is default
 MEM= amount of mem to use in MB. 1024 is default
 VERBOSE= 1:print generated domain file. 0 is default.
 BLOCKING= 1:block until VM halts then print runtime. 0 is default.
+SCRATCH= location to store temporary disks
 "
 
 DIR=$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )
@@ -129,9 +130,19 @@ genDiskStr() {
     if [[ ${l_disk} =~ \.iso$ ]]; then
         device="type='file' device='cdrom'"
     elif [ -d $l_disk ]; then
-        device="type='dir' device='disk'><readonly/"
-        driver="name='qemu'"
-        source="dir='${l_disk}'"
+        dirsize=`du --summarize $l_disk | cut -f1`
+        [ "$DIRPATH_SCRATCH" ] || error "asked to use a directoryr, but this requires the DIRPATH_SCRATCH environment to be set to the path of a scratch dir."
+        [ -d "$DIRPATH_SCRATCH" ] || error "the $DIRPATH_SCRATCH directory path provided does not point to an existent directory"
+        fpath_tmpdisk=$DIRPATH_SCRATCH/stampedIron-tmp.`date +%s%N`.disk
+        fallocate -l `echo $dirsize '*' '1.2' | bc` $fpath_tmpdisk
+        mkfs.ext4 $fpath_tmpdisk
+        mntpoint=/mnt/stampediron-mount
+        mkdir -p $mntpoint
+        mount $fpath_tmpdisk $mntpoint
+        cp -rT $l_disk $mntpount
+        umount $mntpoint
+        #losetup -d $loopPoint
+        source="file='${fpath_tmpdisk}'"
     fi
 
     outstr="<disk $device>
