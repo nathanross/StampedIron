@@ -46,8 +46,8 @@ dbg() { [ "$VERBOSE" ] && [ $VERBOSE -eq 1 ] && echo "$@"; $@; }
 is_int() { [[ $1 =~ ^[0-9]+$ ]]; return $?; }
 mkdtmp() {
     local -n l=$1;
-    if [ "$WORKDIR" ]; then
-       l="${WORKDIR}/`date +%s%N`"
+    if [ "$DIRPATH_SCRATCH" ]; then
+       l="${DIRPATH_SCRATCH}/`date +%s%N`"
        mkdir -p $l
     else
         l=`mktemp -d 2>/dev/null || mktemp -d -t 'mytmpdir'`
@@ -131,15 +131,20 @@ genDiskStr() {
         device="type='file' device='cdrom'"
     elif [ -d $l_disk ]; then
         dirsize=`du --summarize $l_disk | cut -f1`
-        [ "$DIRPATH_SCRATCH" ] || error "asked to use a directoryr, but this requires the DIRPATH_SCRATCH environment to be set to the path of a scratch dir."
+        [ "$DIRPATH_SCRATCH" ] || error "asked to use a directory, but this requires the DIRPATH_SCRATCH environment to be set to the path of a scratch dir."
         [ -d "$DIRPATH_SCRATCH" ] || error "the $DIRPATH_SCRATCH directory path provided does not point to an existent directory"
         fpath_tmpdisk=$DIRPATH_SCRATCH/stampedIron-tmp.`date +%s%N`.disk
-        fallocate -l `echo $dirsize '*' '1.2' | bc` $fpath_tmpdisk
-        mkfs.ext4 $fpath_tmpdisk
+        #add some padding for blocks, plus a baseline of 15mb for fs min size reqs
+        tmpdiskSize=`echo '(' $dirsize ' * ' 1.2 ') + 15000000' | bc`
+        #convert to int
+        tmpdiskSize=`printf '%i' $tmpdiskSize`
+        echo $tmpDiskSize
+        fallocate -l $tmpdiskSize $fpath_tmpdisk || exit 1
+        mkfs.ext4 $fpath_tmpdisk || exit 1
         mntpoint=/mnt/stampediron-mount
         mkdir -p $mntpoint
-        mount $fpath_tmpdisk $mntpoint
-        cp -rT $l_disk $mntpount
+        mount $fpath_tmpdisk $mntpoint || exit 1
+        cp -rT $l_disk $mntpoint || exit 1
         umount $mntpoint
         #losetup -d $loopPoint
         source="file='${fpath_tmpdisk}'"

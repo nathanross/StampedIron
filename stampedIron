@@ -40,6 +40,9 @@ always required args:
           source iso for creating autoinstall iso
     --dirpath-product
           dir for storing generated iso, blank disk, and output disk
+    --dirpath-scratch
+          dir for storing large temporary files.
+          used when creating an iso and for temporary disks vhen running vms
 
 conditionally required args:
     --recipes
@@ -52,9 +55,6 @@ conditionally required args:
           evaluable function that generates a seedfile.
           can use special variable \$cookbook which is
           replaced with example/seedfiles
-          required if an iso is being created.
-    --dirpath-scratch
-          dir for storing large temporary files
           required if an iso is being created.
 
 optional env dirs:
@@ -107,7 +107,7 @@ force_create_iso() {
     local -r \
           func_genseed_in="$1" \
           fpath_src_iso_in="$2" \
-          fname_dest_iso_in="$3"
+          fpath_dest_iso_in="$3"
 
     mkdtmp tmpd_seedgen
     (export IFS=' ';
@@ -138,6 +138,7 @@ mainWithArgs() {
     
     require d_product $DIRPATH_PRODUCT
     require fpath_src_iso $FPATH_SRC_ISO
+    require d_scratch $DIRPATH_SCRATCH
 
     local -r \
           fpath_dest_iso=$d_product/${FNAME_DEST_ISO:-auto_install.iso} \
@@ -164,7 +165,6 @@ mainWithArgs() {
             if ([ $force_refresh_iso_from_seedfile -eq 1 ] ||
                     [ ! -e $fpath_dest_iso ]); then
                 [ -f $fpath_src_iso ] || usage "fpath_src_iso value $fpath_src_iso is not a file"
-                [ "$DIRPATH_SCRATCH" ] || usage 'since we are recreating the iso with these options, you must provide $DIRPATH_SCRATCH'
                 [ "$FUNC_SEEDGEN" ] || usage 'since we are recreating the iso with these options, you must provide $FUNC_SEEDGEN'
                 func_genseed=`echo $FUNC_SEEDGEN | env -i cookbook=$d_seedfiles envsubst '$cookbook'`
                 rm -f $fpath_dest_iso
@@ -174,7 +174,7 @@ mainWithArgs() {
             dbg $d_tools/./unattended_install.sh $fpath_dest_iso $fpath_blank_disk $size || exit 1
         fi
         rm -f $fpath_product_disk
-        cp $fpath_blank_disk $fpath_product_disk.tmp || exit 1
+        cp $fpath_blank_disk $fpath_product_disk || exit 1
         export $run_vars
         (IFS=' ' dbg $d_tools/./run_image.sh $fpath_product_disk::1 $recipes )
     else

@@ -19,7 +19,7 @@ export USAGE_MSG="
  inject_seedfile.sh <src iso> <out iso> <seed file> (<file or dir to copy to cd root>)
 
  environment variables:
- WORKDIR - store temporary files HERE instead of temp directory.
+ DIRPATH_SCRATCH - store temporary files HERE instead of temp directory.
  DISTRO - (deprecated) distro of cd. Supported values: debian, ubuntu 
 "
 
@@ -33,8 +33,8 @@ dbg() { [ "$VERBOSE" ] && [ $VERBOSE -eq 1 ] && echo "$@"; $@; }
 is_int() { [[ $1 =~ ^[0-9]+$ ]]; return $?; }
 mkdtmp() {
     local -n l=$1;
-    if [ "$WORKDIR" ]; then
-       l="${WORKDIR}/`date +%s%N`"
+    if [ "$DIRPATH_SCRATCH" ]; then
+       l="${DIRPATH_SCRATCH}/`date +%s%N`"
        mkdir -p $l
     else
         l=`mktemp -d 2>/dev/null || mktemp -d -t 'mytmpdir'`
