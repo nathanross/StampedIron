@@ -20,16 +20,16 @@
 # no intent of fwd'ing it. 
 echo -e "nameserver 75.75.75.75\nnameserver 75.75.76.76" > /etc/resolv.conf
 
-[ ! /dev/sdb1 ] && exit 0
+[ ! /dev/sdb ] && exit 0
 mkdir -p /opt/envs
-mount /dev/sdb1 /opt/envs
+mount /dev/sdb /opt/envs
 mntdir=/mnt/stamped_iron_auto
 mkdir -p $mntdir
 for i in c d e f g h i j
 do
     taskname="sd${i}"
-    if [ -e /dev/${taskname}1 ]; then        
-        mount /dev/${taskname}1 $mntdir
+    if [ -e /dev/${taskname} ]; then        
+        mount /dev/${taskname} $mntdir
         if [ -e $mntdir/run.sh ]; then
             chmod +x $mntdir/run.sh
             envfile=/opt/envs/${taskname}

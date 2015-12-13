@@ -130,16 +130,18 @@ genDiskStr() {
     if [[ ${l_disk} =~ \.iso$ ]]; then
         device="type='file' device='cdrom'"
     elif [ -d $l_disk ]; then
-        dirsize=`du --summarize $l_disk | cut -f1`
+        dirsize=`du -L --summarize $l_disk | cut -f1`
         [ "$DIRPATH_SCRATCH" ] || error "asked to use a directory, but this requires the DIRPATH_SCRATCH environment to be set to the path of a scratch dir."
         [ -d "$DIRPATH_SCRATCH" ] || error "the $DIRPATH_SCRATCH directory path provided does not point to an existent directory"
         fpath_tmpdisk=$DIRPATH_SCRATCH/stampedIron-tmp.`date +%s%N`.disk
         #add some padding for blocks, plus a baseline of 15mb for fs min size reqs
-        tmpdiskSize=`echo '(' $dirsize ' * ' 1.2 ') + 15000000' | bc`
+        tmpdiskSize=`echo '(' $dirsize ' * ' 1.2 ') + 15000' | bc`
         #convert to int
-        tmpdiskSize=`printf '%i' $tmpdiskSize`
-        echo $tmpDiskSize
-        fallocate -l $tmpdiskSize $fpath_tmpdisk || exit 1
+        echo "size for $l_disk:"
+        echo $tmpdiskSize
+        tmpdiskSize=`printf '%.0f' $tmpdiskSize`
+        echo $tmpdiskSize
+        fallocate -l "${tmpdiskSize}k" $fpath_tmpdisk || exit 1
         mkfs.ext4 $fpath_tmpdisk || exit 1
         mntpoint=/mnt/stampediron-mount
         mkdir -p $mntpoint
