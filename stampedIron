@@ -66,13 +66,23 @@ optional env dirs:
           filename for any generated product disk
     --disk-size
           size of blank and product disk
-    -1|--force-refresh-product-disk
+    -9|--force-rerun-recipes
+          rerun the recipes passed in on the product disk without first recopying
+          the product disk from the blank. this is probably NOT what you want
+          unless you're testing your recipes for idempotency. If that's not
+          what you are doing, instead for just debugging your recipes it's
+          better to temporarily remove any 'shutdown' or 'restart' recipe
+          at the end of your recipes, that way you don't try to simultaneously
+          fix a recipe that is failing and deal with any scripts lacking idempotency 
+          (e.g. don't have to control for scripts that running them twice has 
+          different effects than running them once)
+    -3|--force-refresh-product-disk
           recreate the product disk 
           from the blank disk even if the product disk exists.
     -2|--force-refresh-blank-disk
           if a product disk is being created,
            always recreate the blank disk from the iso.    
-    -3|--force-refresh-iso
+    -1|--force-refresh-iso
           if a blank disk is being created,
            always recreate the iso from the seedfile
     --run-vars
@@ -149,7 +159,8 @@ mainWithArgs() {
           verbose=${VERBOSE:-0} \
           force_refresh_iso_from_seedfile=${FORCE_REFRESH_ISO:-0} \
           force_refresh_blankdisk_from_iso=${FORCE_REFRESH_BLANK_DISK:-0} \
-          force_refresh_productdisk_from_blankdisk=${FORCE_REFRESH_PRODUCT_DISK:-0}
+          force_refresh_productdisk_from_blankdisk=${FORCE_REFRESH_PRODUCT_DISK:-0} \
+          force_run_recipes=${FORCE_RUN_RECIPES:-0}
     [ -d $d_product ] || mkdir -p $d_product || usage 'must provide a dir $OUTDIR'
 
 
@@ -176,9 +187,16 @@ mainWithArgs() {
         rm -f $fpath_product_disk
         cp $fpath_blank_disk $fpath_product_disk || exit 1
         export $run_vars
+        echo "-----ABOUT TO RUN IT----"
         (IFS=' ' dbg $d_tools/./run_image.sh $fpath_product_disk::1 $recipes )
     else
-        (IFS=' ' dbg $d_tools/./run_image.sh $fpath_product_disk::1)
+        if [ $force_run_recipes -eq 1 ]; then
+            [ "$RECIPES" ] || usage 'must provide $RECIPES'
+            recipes=`echo $RECIPES | env -i cookbook=$d_cookbook envsubst '$cookbook'`
+            (IFS=' ' dbg $d_tools/./run_image.sh $fpath_product_disk::1 $recipes )
+        else
+            (IFS=' ' dbg $d_tools/./run_image.sh $fpath_product_disk::1)
+        fi
     fi    
 }
 
@@ -212,13 +230,16 @@ main() {
             --disk-size)
                 export DISK_SIZE="$2";
                 shift 2 ;;
-            -3 | --force-refresh-iso)
+            -9 | --force-run-recipes)
+                export FORCE_RUN_RECIPES=1
+                shift ;;
+            -1 | --force-refresh-iso)
                 export FORCE_REFRESH_ISO=1
                 shift ;;
             -2 | --force-refresh-blank-disk)
                 export FORCE_REFRESH_BLANK_DISK=1
                 shift ;;
-            -1 | --force-refresh-product-disk)
+            -3 | --force-refresh-product-disk)
                 export FORCE_REFRESH_PRODUCT_DISK=1
                 shift ;;
             --run-vars)
