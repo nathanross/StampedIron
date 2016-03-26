@@ -54,7 +54,9 @@ There are some tools that do similar work.
 
 ```
 #install requisite software and add stampedIron to path
-apt-get -y install libvirt-clients libvirt0 qemu-kvm
+xhost +
+su
+apt-get -y install libvirt-clients libvirt0 libvirt-bin qemu-kvm
 export PATH=$PATH:`pwd`
 
 #create directory for source installation media
@@ -63,8 +65,10 @@ wget -c http://cdimage.debian.org/debian-cd/8.1.0/amd64/iso-cd/debian-8.1.0-amd6
 
 #ensure vm is created, and run it, returning the IP
 mkdir -p /srv/squid
+#if you don't have the image built already, build the image
 ./examples/squid_image.sh
-proxy_socket=`WAIT_FOR_IP=1 ./tools/./run_image.sh /srv/squid/output.disk | cut -d, -f2`:3128
+#run the image
+proxy_socket=`WAIT_FOR_IP=1 ./tools/./run_image.sh /srv/squid/product.disk | cut -d, -f2`:3128
 
 #example, use the proxy with wget
 echo "HTTP_PROXY=$proxy_socket" >> ~/.wgetrc
