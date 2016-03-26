@@ -54,7 +54,7 @@ There are some tools that do similar work.
 
 ```
 #install requisite software and add stampedIron to path
-apt-get -y install virsh qemu-kvm
+apt-get -y install libvirt-clients libvirt0 qemu-kvm
 export PATH=$PATH:`pwd`
 
 #create directory for source installation media
