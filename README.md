@@ -56,22 +56,22 @@ There are some tools that do similar work.
 #install requisite software and add stampedIron to path
 xhost +
 su
-apt-get -y install libvirt-clients libvirt0 libvirt-bin qemu-kvm
+apt-get -y install libvirt-clients libvirt0 libvirt-bin kvm genisoimage
 export PATH=$PATH:`pwd`
 
 #create directory for source installation media
 mkdir -p /var/cache/install_discs
-wget -c http://cdimage.debian.org/debian-cd/8.1.0/amd64/iso-cd/debian-8.1.0-amd64-CD-1.iso -P /var/cache/install_discs
+wget -c http://cdimage.debian.org/debian-cd/8.3.0/amd64/iso-cd/debian-8.3.0-amd64-CD-1.iso -P /var/cache/install_discs
 
 #ensure vm is created, and run it, returning the IP
 mkdir -p /srv/squid
 #if you don't have the image built already, build the image
 ./examples/squid_image.sh
 #run the image
-proxy_socket=`WAIT_FOR_IP=1 ./tools/./run_image.sh /srv/squid/product.disk | cut -d, -f2`:3128
+PROXY_SOCKET=`WAIT_FOR_IP=1 ./tools/./run_image.sh /srv/squid/product.disk | cut -d, -f2`:3128
 
 #example, use the proxy with wget
-echo "HTTP_PROXY=$proxy_socket" >> ~/.wgetrc
+echo "HTTP_PROXY=$PROXY_SOCKET" >> ~/.wgetrc
 example_file=http://archive.org/download/ItsAllOverNowBabyBlue_201506/It%27s%20all%20over%20now%20baby%20blue.mp3
 wget $example_file
 wget $example_file
