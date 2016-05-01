@@ -2,6 +2,8 @@
   <name>${name}</name>
   <memory>${mem}</memory>
   <currentMemory>${mem}</currentMemory>
+  <cpu mode='host-passthrough'>
+  </cpu>
   <vcpu>${vcpu}</vcpu>
   <os>
     <type arch='x86_64'>hvm</type>

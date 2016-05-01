@@ -28,7 +28,7 @@ hypervisor leveraging tool / VMM like Qemu, Virtualbox, VMWare, etc.
 environment vars:
 NAME = name to give to instance
 VCPU= num of vcpus. 2 is default
-MEM= amount of mem to use in MB. 1024 is default
+MEM= amount of mem to use in MB. 2048 is default
 VERBOSE= 1:print generated domain file. 0 is default.
 BLOCKING= 1:block until VM halts then print runtime. 0 is default.
 SCRATCH= location to store temporary disks
@@ -162,7 +162,7 @@ genDiskStr() {
 }
 
 main() {
-    local -r name=${NAME:-vcon`date +%s`} vcpu=${VCPU:-2} memMB=${MEM:-1024}
+    local -r name=${NAME:-vcon`date +%s`} vcpu=${VCPU:-2} memMB=${MEM:-2048}
     local disks='' bootprio='' l_disk=''
     local wait_for_ip=${WAIT_FOR_IP:-0} blocking=${BLOCKING:-0}
     local verbose=${VERBOSE:-0}

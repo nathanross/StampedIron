@@ -126,65 +126,67 @@ define(HALF_USABLE_SP, eval(HALF_USABLE_S ` + 1'))
 # not exactly as you might expect - two equal
 # prio partitions mean only one will expand.
 # expect to use manual config for now.
-d-i partman-auto/expert_recipe string \
-      extgpt :: \
-              512 512 512 fat16         \
-                $primary{ }             \
-                $iflabel{ gpt }         \
-                method{ efi }           \
-                label { boot }          \
-                format{ }               . \
-              USABLE_S 50 USABLE_SP ext4 \
-                $primary{ } \
-                $bootable{ } \
-                method{ format } format{ } \
-                use_filesystem{ } \
-                filesystem{ ext4 } \
-                mountpoint{ / } \
-                options/noatime{ noatime } . \
-              500 100 2000 linux-swap \
-                $primary{ } \
-                method{ swap } format{ } .
+#d-i partman-auto/expert_recipe string \
+#      extgpt :: \
+#              512 512 512 fat16         \
+#                $primary{ }             \
+#                $iflabel{ gpt }         \
+#                method{ efi }           \
+#                label { boot }          \
+#                format{ }               . \
+#              USABLE_S 50 USABLE_SP ext4 \
+#                $primary{ } \
+#                $bootable{ } \
+#                method{ format } format{ } \
+#                use_filesystem{ } \
+#                filesystem{ ext4 } \
+#                mountpoint{ / } \
+#                options/noatime{ noatime } . \
+#              500 100 2000 linux-swap \
+#                $primary{ } \
+#                method{ swap } format{ } .
 
-d-i partman-auto/expert_recipe string \
-      extmbr :: \
-              USABLE_S 50 USABLE_SP ext4 \
-                $primary{ } \
-                $bootable{ } \
-                method{ format } format{ } \
-                use_filesystem{ } \
-                filesystem{ ext4 } \
-                mountpoint{ / } \
-                options/noatime{ noatime } . \
-              500 100 2000 linux-swap \
-                $primary{ } \
-                method{ swap } format{ } .
 
-d-i partman-auto/expert_recipe string \
-      btrfsgpt :: \
-              512 512 512 fat16         \
-                $primary{ }             \
-                $iflabel{ gpt }         \
-                method{ efi }           \
-                label { boot }          \
-                format{ }               . \
-              HALF_USABLE_S 50 HALF_USABLE_SP btrfs        \
-                method{ format } format{ } \
-                use_filesystem{ }        \
-                filesystem{ btrfs }      \
-                mountpoint{ / }          \
-                label { usb_raid }       \
-                options/noatime{ noatime } . \
-              HALF_USABLE_S 50 HALF_USABLE_SP btrfs         \
-                method{ }                \
-                filesystem{ btrfs } \
-                options/noatime{ noatime } . \
-              100 5 -1 ext4                \
-                $bootable{ }             \
-                method{ }                \
-                filesystem{ ext4 }       \
-                options/noatime{ noatime } .
+#d-i partman-auto/expert_recipe string \
+#      btrfsgpt :: \
+#              512 512 512 fat16         \
+#                $primary{ }             \
+#                $iflabel{ gpt }         \
+#                method{ efi }           \
+#                label { boot }          \
+#                format{ }               . \
+#              HALF_USABLE_S 50 HALF_USABLE_SP btrfs        \
+#                method{ format } format{ } \
+#                use_filesystem{ }        \
+#                filesystem{ btrfs }      \
+#                mountpoint{ / }          \
+#                label { usb_raid }       \
+#                options/noatime{ noatime } . \
+#              HALF_USABLE_S 50 HALF_USABLE_SP btrfs         \
+#                method{ }                \
+#                filesystem{ btrfs } \
+#                options/noatime{ noatime } . \
+#              100 5 -1 ext4                \
+#                $bootable{ }             \
+#                method{ }                \
+#                filesystem{ ext4 }       \
+#                options/noatime{ noatime } .
 
+#GPT install - the below lines should be uncommented if you want a GPT
+#install, and commented out if you want MBR
+#d-i   grub-installer/bootdev string /dev/sda1
+#d-i   partman-basicfilesystems/choose_label string gpt
+#d-i   partman-basicfilesystems/default_label string gpt
+#d-i   partman-partitioning/choose_label string gpt
+#d-i   partman-partitioning/default_label string gpt
+#d-i   partman/choose_label string gpt
+#d-i   partman/default_label string gpt
+#partman-partitioning  partman-partitioning/choose_label select gpt
+
+#MBR install - the below lines should be uncommented if you want an MBR
+#install, and commented out if you want GPT
+d-i   grub-installer/bootdev string /dev/sda
+ifelse(BTRFS_RAID1, `true', `
 d-i partman-auto/expert_recipe string \
       btrfsmbr :: \
               HALF_USABLE_S 50 HALF_USABLE_SP btrfs \
@@ -210,30 +212,23 @@ d-i partman-auto/expert_recipe string \
                 filesystem{ ext4 } \
                 mountpoint{ /boot } \
                 options/noatime{ noatime } .
-
-#GPT install - the below lines should be uncommented if you want a GPT
-#install, and commented out if you want MBR
-#d-i   grub-installer/bootdev string /dev/sda1
-#d-i   partman-basicfilesystems/choose_label string gpt
-#d-i   partman-basicfilesystems/default_label string gpt
-#d-i   partman-partitioning/choose_label string gpt
-#d-i   partman-partitioning/default_label string gpt
-#d-i   partman/choose_label string gpt
-#d-i   partman/default_label string gpt
-#partman-partitioning  partman-partitioning/choose_label select gpt
-#d-i     partman-auto/choose_recipe      select boot-gpt
-
-
-#MBR install - the below lines should be uncommented if you want an MBR
-#install, and commented out if you want GPT
-d-i   grub-installer/bootdev string /dev/sda
-ifelse(BTRFS_RAID1, `true', `
-d-i   partman-auto/choose_recipe select btrfsmbr
 d-i preseed/late_command string \
     in-target btrfs device add -f /dev/sda2 /; \
     in-target btrfs balance start -dconvert=raid1 -mconvert=raid1 /;
 ', `
-d-i   partman-auto/choose_recipe select extmbr
+d-i partman-auto/expert_recipe string \
+      extmbr :: \
+              USABLE_S 50 USABLE_SP ext4 \
+                $primary{ } \
+                $bootable{ } \
+                method{ format } format{ } \
+                use_filesystem{ } \
+                filesystem{ ext4 } \
+                mountpoint{ / } \
+                options/noatime{ noatime } . \
+              500 100 2000 linux-swap \
+                $primary{ } \
+                method{ swap } format{ } .
 '
 )
 # -- grub and reboot ----------------------------
